@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        // Theme initialization - Must be first to prevent flash
+        (function() {
+            const settings = localStorage.getItem('nova_settings');
+            let isDark = true;
+            if (settings) {
+                try {
+                    const parsed = JSON.parse(settings);
+                    if (parsed && typeof parsed.darkMode !== 'undefined') {
+                        isDark = parsed.darkMode;
+                    }
+                } catch (e) {
+                    isDark = true;
+                }
+            }
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            // Immediate background color to eliminate flash
+            document.write('<style>html,body{background-color:' + (isDark ? '#0a0a0b' : '#ffffff') + ' !important;}</style>');
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Aura AI</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="settings.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <span class="logo-text">Aura AI</span>
+                </div>
+            </div>
+            <div class="sidebar-actions">
+                <a href="index.html" class="new-chat-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Chat</span>
+                </a>
+            </div>
+            <div class="sidebar-footer">
+                <div class="footer-actions">
+                    <a href="settings.html" class="footer-action-btn active" style="text-decoration: none;">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                    <a href="profile.html" class="footer-action-btn" style="text-decoration: none;">
+                        <div class="profile-avatar"><i class="fas fa-user"></i></div>
+                        <span>Profile</span>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Settings Area -->
+        <main class="chat-main">
+            <header class="chat-header">
+                <div class="header-left">
+                    <div class="bot-details">
+                        <h1 class="bot-name">System Settings</h1>
+                        <span class="bot-status">Configure your AI experience</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="settings-container">
+                <div class="settings-content">
+                    
+                    <!-- Section: AI Engine -->
+                    <section class="section-card">
+                        <div class="card-header">
+                            <i class="fas fa-brain"></i>
+                            <h2>AI Engine Configuration</h2>
+                        </div>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">AI Model</span>
+                                    <span class="setting-desc">Choose the brain powering your conversations</span>
+                                </div>
+                                <select class="setting-control" id="modelSelect">
+                                    <option value="power-bt-4">Power BT v4.2 (Balanced)</option>
+                                    <option value="power-bt-pro">Power BT Pro (Creative)</option>
+                                    <option value="power-bt-fast">Power BT Fast (Turbo)</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Creativity Level (Temperature)</span>
+                                    <span class="setting-desc">Higher values lead to more creative but less predictable results</span>
+                                </div>
+                                <input type="range" class="setting-range" id="tempRange" min="0" max="100" value="70">
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Section: Interface -->
+                    <section class="section-card">
+                        <div class="card-header">
+                            <i class="fas fa-display"></i>
+                            <h2>Interface & Appearance</h2>
+                        </div>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Dark Mode</span>
+                                    <span class="setting-desc">Switch between light and dark visual themes</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="themeToggle" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Compact Mode</span>
+                                    <span class="setting-desc">Maximize workspace by reducing UI spacing</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="compactToggle">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Sound Effects</span>
+                                    <span class="setting-desc">Play subtle alerts for new messages</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="soundToggle" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Section: Data Management -->
+                    <section class="section-card">
+                        <div class="card-header">
+                            <i class="fas fa-database"></i>
+                            <h2>Data & Privacy</h2>
+                        </div>
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <div class="setting-info">
+                                    <span class="setting-label">Auto-save History</span>
+                                    <span class="setting-desc">Automatically preserve conversations in your local storage</span>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" id="autosaveToggle" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="data-actions">
+                                <button class="danger-btn" id="clearHistoryBtn">
+                                    <i class="fas fa-trash"></i>
+                                    Clear All History
+                                </button>
+                                <button class="action-btn-line" id="exportDataBtn">
+                                    <i class="fas fa-download"></i>
+                                    Export Account Data
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="dashboard-footer">
+                        <p>All changes are saved automatically to your local profile.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="settings.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+.env
+__pycache__/
+*.pyc
+venv/
+env/
+node_modules/
+.vscode/
+.idea/
+server.log
+server2.log
+uploads/
+*.pdf
+*.docx
+*.txt
+!AI Knowledge.txt
+!requirements.txt
+!.env.example

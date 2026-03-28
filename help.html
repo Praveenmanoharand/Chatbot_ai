@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script>
+        // Theme initialization - Must be first to prevent flash
+        (function() {
+            const settings = localStorage.getItem('nova_settings');
+            let isDark = true;
+            if (settings) {
+                try {
+                    const parsed = JSON.parse(settings);
+                    if (parsed && typeof parsed.darkMode !== 'undefined') {
+                        isDark = parsed.darkMode;
+                    }
+                } catch (e) {
+                    isDark = true;
+                }
+            }
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            // Immediate background color to eliminate flash
+            document.write('<style>html,body{background-color:' + (isDark ? '#0a0a0b' : '#ffffff') + ' !important;}</style>');
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help & Support | Aura AI</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="help.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-effects">
+        <div class="gradient-orb gradient-orb-1"></div>
+        <div class="gradient-orb gradient-orb-2"></div>
+        <div class="gradient-orb gradient-orb-3"></div>
+        <div class="noise-overlay"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar (Simplified for Help Page) -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <span class="logo-text">Aura AI</span>
+                </div>
+                <button class="close-sidebar-btn" id="closeSidebarBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="sidebar-actions">
+                <a href="index.html" class="new-chat-btn" style="text-decoration: none;">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Chat</span>
+                </a>
+            </div>
+
+            <nav class="history-section">
+                <div class="history-header">
+                    <span class="history-title">Support Resources</span>
+                </div>
+                <div class="history-list">
+                    <div class="history-item active" data-target="faq">
+                        <div class="history-item-icon"><i class="fas fa-question"></i></div>
+                        <div class="history-item-content">
+                            <div class="history-item-title">FAQs</div>
+                        </div>
+                    </div>
+                    <div class="history-item" data-target="contact">
+                        <div class="history-item-icon"><i class="fas fa-headset"></i></div>
+                        <div class="history-item-content">
+                            <div class="history-item-title">Contact Us</div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="chat-main">
+            <header class="chat-header">
+                <button class="menu-toggle-btn" id="menuToggleBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="header-right">
+                    <h1 class="page-title">Help Center</h1>
+                </div>
+            </header>
+
+            <div class="help-content-area">
+                <!-- FAQ Section -->
+                <section id="faqSection" class="help-section active">
+                    <div class="section-header">
+                        <h2>Frequently Asked Questions</h2>
+                        <div class="search-wrapper">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="faqSearch" placeholder="Search for answers...">
+                        </div>
+                    </div>
+
+                    <div class="faq-grid">
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                <span>What is Aura AI?</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Aura AI is a premium, context-aware artificial intelligence platform designed for seamless interaction, document analysis, and efficient problem-solving.</p>
+                            </div>
+                        </div>
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                <span>Is my data secure?</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Yes, Aura AI uses secure MongoDB storage and industry-standard encryption. Your chat history and profile data are protected and only accessible to you.</p>
+                            </div>
+                        </div>
+                        <div class="faq-item">
+                            <div class="faq-question">
+                                <span>Can I customize my profile?</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div class="faq-answer">
+                                <p>Absolutely! Navigate to your Profile section from the sidebar to update your name, bio, location, and upload a custom profile picture which will be stored in our database.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Contact Section -->
+                <section id="contactSection" class="help-section">
+                    <div class="section-header">
+                        <h2>Contact Support</h2>
+                        <p>Have a specific question? Send us a message and we'll get back to you.</p>
+                    </div>
+
+                    <form id="contactForm" class="contact-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="name">Your Name</label>
+                                <input type="text" id="name" required placeholder="John Doe">
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email Address</label>
+                                <input type="email" id="email" required placeholder="john@example.com">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="subject">Subject</label>
+                            <input type="text" id="subject" required placeholder="How can we help?">
+                        </div>
+                        <div class="form-group">
+                            <label for="message">Message</label>
+                            <textarea id="message" required placeholder="Tell us more about your inquiry..." rows="5"></textarea>
+                        </div>
+                        <button type="submit" class="send-btn" style="width: 100%; height: 50px;">
+                            <span>Send Message</span>
+                            <i class="fas fa-paper-plane" style="margin-left: 10px;"></i>
+                        </button>
+                    </form>
+                    <div id="formStatus" class="form-status"></div>
+                </section>
+            </div>
+
+            <footer class="input-footer">
+                <p class="mistake-disclaimer">Aura AI can make a mistake. Check important info.</p>
+            </footer>
+        </main>
+    </div>
+
+    <script src="help.js"></script>
+</body>
+</html>

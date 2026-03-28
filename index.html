@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script>
+        // Theme initialization - Must be first to prevent flash
+        (function() {
+            const settings = localStorage.getItem('nova_settings');
+            let isDark = true;
+            if (settings) {
+                try {
+                    const parsed = JSON.parse(settings);
+                    if (parsed && typeof parsed.darkMode !== 'undefined') {
+                        isDark = parsed.darkMode;
+                    }
+                } catch (e) {
+                    isDark = true;
+                }
+            }
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            // Immediate background color to eliminate flash
+            document.write('<style>html,body{background-color:' + (isDark ? '#0a0a0b' : '#ffffff') + ' !important;}</style>');
+        })();
+    </script>
+    <script>
+        // Check if user is logged in
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'auth.html';
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Aura AI - Intelligent Assistant</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@300..700&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Background Effects -->
+    <div class="background-effects">
+        <div class="gradient-orb gradient-orb-1"></div>
+        <div class="gradient-orb gradient-orb-2"></div>
+        <div class="gradient-orb gradient-orb-3"></div>
+        <div class="noise-overlay"></div>
+    </div>
+
+    <!-- Mobile Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Main Application Container -->
+    <div class="app-container">
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Sidebar Header -->
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <span class="logo-text">Aura AI</span>
+                </div>
+                <button class="close-sidebar-btn" id="closeSidebarBtn" aria-label="Close sidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- New Chat Button -->
+            <div class="sidebar-actions">
+                <button class="new-chat-btn" id="newChatBtn">
+                    <i class="fas fa-plus"></i>
+                    <span>New Chat</span>
+                    <span class="shortcut-badge">Ctrl+N</span>
+                </button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-container">
+                <div class="search-input-wrapper">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search conversations...">
+                    <button class="search-clear-btn" id="searchClearBtn" aria-label="Clear search">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat History Section -->
+            <div class="history-section">
+                <div class="history-header">
+                    <span class="history-title">Recent Conversations</span>
+                    <button class="clear-history-btn" id="clearHistoryBtn" aria-label="Clear all history">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+
+                <div class="history-list" id="historyList">
+                    <!-- History items will be dynamically generated -->
+                </div>
+
+                <div class="history-empty-state" id="historyEmptyState">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <p class="empty-state-text">No conversations yet</p>
+                    <p class="empty-state-subtext">Start a new chat to see your history</p>
+                </div>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+
+                <!-- Footer Actions -->
+                <div class="footer-actions">
+                    <button class="footer-action-btn" id="settingsBtn">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </button>
+                    <a href="help.html" class="footer-action-btn" id="helpBtn" style="text-decoration: none;">
+                        <i class="fas fa-question-circle"></i>
+                        <span>Help</span>
+                    </a>
+                    <button class="footer-action-btn" id="profileBtn">
+                        <div class="profile-avatar">
+                            <img id="sidebarProfileAvatar" src="" alt="" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            <i class="fas fa-user" id="sidebarProfileIcon"></i>
+                        </div>
+                        <span>Profile</span>
+                    </button>
+                </div>
+
+                <!-- Version Info -->
+                <div class="version-info">
+                    <span>Aura AI v2.4.1</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-main">
+            <!-- Chat Header -->
+            <header class="chat-header">
+                <div class="header-left">
+                    <button class="menu-toggle-btn" id="menuToggleBtn" aria-label="Toggle sidebar">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="bot-info">
+                        <div class="bot-avatar-container">
+                            <div class="bot-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="status-indicator online" id="statusIndicator"></div>
+                        </div>
+                        <div class="bot-details">
+                            <h1 class="bot-name">Aura AI</h1>
+                            <span class="bot-status" id="botStatus">Online - Ready to help</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="More options">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div class="header-actions" id="headerActions">
+                        <button class="header-action-btn" id="shareBtn" aria-label="Share chat"
+                            data-tooltip="Share Chat">
+                            <i class="fas fa-share-alt"></i>
+                        </button>
+                        <button class="header-action-btn" id="archiveBtn" aria-label="Archive chat"
+                            data-tooltip="Archive Chat">
+                            <i class="fas fa-archive"></i>
+                        </button>
+                        <button class="header-action-btn" id="pinBtn" aria-label="Pin chat" data-tooltip="Pin Chat">
+                            <i class="fas fa-thumbtack"></i>
+                        </button>
+
+                        <div class="header-divider"></div>
+                        <button class="header-action-btn theme-toggle-btn" id="themeToggleBtn" aria-label="Toggle theme"
+                            data-tooltip="Toggle Theme">
+                            <i class="fas fa-moon" id="themeIcon"></i>
+                        </button>
+                        <button class="header-action-btn" id="notificationsBtn" aria-label="Notifications"
+                            data-tooltip="Notifications">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge" id="notificationBadge"></span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Messages Container -->
+            <div class="messages-container" id="messagesContainer">
+                <!-- Welcome Screen -->
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-content">
+                        <!-- Logo removed as per user request -->
+                        <h2 class="welcome-title" id="welcomeTitle">Welcome to Aura AI</h2>
+                        <p class="welcome-subtitle">Your intelligent assistant powered by advanced AI</p>
+
+                        <div class="feature-cards">
+                            <div class="feature-card" data-prompt="Explain quantum computing in simple terms">
+                                <div class="feature-icon">
+                                    <i class="fas fa-lightbulb"></i>
+                                </div>
+                                <h3 class="feature-title">Learn Something New</h3>
+                                <p class="feature-description">Ask me to explain complex topics in simple terms</p>
+                            </div>
+                            <div class="feature-card" data-prompt="Help me write a professional email">
+                                <div class="feature-icon">
+                                    <i class="fas fa-pen-fancy"></i>
+                                </div>
+                                <h3 class="feature-title">Write & Create</h3>
+                                <p class="feature-description">Get help with writing, editing, and creative tasks</p>
+                            </div>
+                            <div class="feature-card" data-prompt="Debug this code and explain the issue">
+                                <div class="feature-icon">
+                                    <i class="fas fa-code"></i>
+                                </div>
+                                <h3 class="feature-title">Code & Debug</h3>
+                                <p class="feature-description">Programming help, code review, and debugging</p>
+                            </div>
+                            <div class="feature-card" data-prompt="Give me 5 creative ideas for a startup">
+                                <div class="feature-icon">
+                                    <i class="fas fa-brain"></i>
+                                </div>
+                                <h3 class="feature-title">Brainstorm Ideas</h3>
+                                <p class="feature-description">Get creative with new ideas and brainstorming sessions</p>
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+
+                <!-- Messages Area -->
+                <div class="messages-area" id="messagesArea">
+                    <!-- Messages will be dynamically inserted here -->
+                </div>
+
+                <!-- Typing Indicator -->
+                <div class="typing-indicator" id="typingIndicator">
+                    <div class="typing-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="typing-content">
+                        <span class="typing-name">Aura AI</span>
+                        <div class="typing-dots">
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scroll to Bottom Button -->
+                <button class="scroll-to-bottom-btn" id="scrollToBottomBtn" aria-label="Scroll to bottom">
+                    <i class="fas fa-chevron-down"></i>
+                    <span class="unread-count" id="unreadCount">0</span>
+                </button>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <button class="pause-btn hidden" id="pauseBtn" aria-label="Pause generation">
+                    <i class="fas fa-pause"></i>
+                    <span>Pause</span>
+                </button>
+                <button class="stop-btn hidden" id="stopBtn" aria-label="Stop generation">
+                    <i class="fas fa-stop"></i>
+                    <span>Stop Generation</span>
+                </button>
+                <div class="file-preview-container" id="filePreviewContainer"></div>
+                <div class="input-container">
+                    <div class="input-actions-left">
+                        <button class="input-action-btn" id="attachFileBtn" aria-label="Attach file">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <button class="input-action-btn" id="emojiBtn" aria-label="Add emoji">
+                            <i class="fas fa-smile"></i>
+                        </button>
+                    </div>
+
+                    <div class="input-wrapper">
+                        <textarea class="message-input" id="messageInput" placeholder="Type your message..." rows="1"
+                            aria-label="Message input"></textarea>
+                        <div class="input-decorations">
+                            <div class="input-glow"></div>
+                        </div>
+                    </div>
+
+                    <div class="input-actions-right">
+                        <button class="input-action-btn" id="voiceInputBtn" aria-label="Voice input">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <button class="send-btn" id="sendBtn" aria-label="Send message">
+                            <i class="fas fa-paper-plane"></i>
+                            <div class="send-btn-ripple"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="input-footer">
+                    <span class="model-info">
+                        <i class="fas fa-microchip"></i>
+                        Model: Aura 1000+ AI
+                    </span>
+                    <span class="character-count">
+                        <span id="characterCount">0</span> / 4000
+                    </span>
+                    <p class="mistake-disclaimer">Aura AI can make a mistake</p>
+                </div>
+
+                <!-- Emoji Picker moved here for correct positioning -->
+                <div class="emoji-picker" id="emojiPicker">
+                    <div class="emoji-picker-header">
+                        <input type="text" class="emoji-search" id="emojiSearch" placeholder="Search emoji...">
+                    </div>
+                    <div class="emoji-categories">
+                        <button class="emoji-category active" data-category="smileys">
+                            <i class="fas fa-smile"></i>
+                        </button>
+                        <button class="emoji-category" data-category="gestures">
+                            <i class="fas fa-hand-paper"></i>
+                        </button>
+                        <button class="emoji-category" data-category="animals">
+                            <i class="fas fa-paw"></i>
+                        </button>
+                        <button class="emoji-category" data-category="food">
+                            <i class="fas fa-utensils"></i>
+                        </button>
+                        <button class="emoji-category" data-category="objects">
+                            <i class="fas fa-lightbulb"></i>
+                        </button>
+                        <button class="emoji-category" data-category="symbols">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                    </div>
+                    <div class="emoji-grid" id="emojiGrid">
+                        <!-- Emojis will be dynamically inserted here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Settings</h2>
+                <button class="modal-close-btn" id="closeSettingsModal" aria-label="Close settings">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Appearance</h3>
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">Dark Mode</span>
+                            <span class="settings-item-description">Switch between light and dark themes</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="darkModeToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">Compact Mode</span>
+                            <span class="settings-item-description">Reduce spacing in the interface</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="compactModeToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">Font Size</span>
+                            <span class="settings-item-description">Adjust the text size</span>
+                        </div>
+                        <select class="settings-select" id="fontSizeSelect">
+                            <option value="small">Small</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Chat</h3>
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">Sound Effects</span>
+                            <span class="settings-item-description">Play sounds for messages</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="soundToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">Auto-scroll</span>
+                            <span class="settings-item-description">Automatically scroll to new messages</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="autoScrollToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">Response Length</span>
+                            <span class="settings-item-description">Preferred length of AI responses</span>
+                        </div>
+                        <select class="settings-select" id="responseLengthSelect">
+                            <option value="short">Short</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="long">Long</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3 class="settings-section-title">Privacy</h3>
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">Save History</span>
+                            <span class="settings-item-description">Remember conversation history</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="saveHistoryToggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">Analytics</span>
+                            <span class="settings-item-description">Help improve Aura AI</span>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="analyticsToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="resetSettingsBtn">Reset to Defaults</button>
+                <button class="modal-btn primary" id="saveSettingsBtn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Profile</h2>
+                <button class="modal-close-btn" id="closeProfileModal" aria-label="Close profile">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="profile-section">
+                    <div class="profile-avatar-wrapper">
+                        <div class="profile-avatar-large" id="profileAvatarContainer">
+                            <i class="fas fa-user" id="profileAvatarIcon"></i>
+                            <img id="profileAvatarImg" src="" style="display: none; width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                        </div>
+                        <button class="change-avatar-btn" id="changeAvatarBtn" aria-label="Change avatar">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                    </div>
+                    <div class="profile-info">
+                        <div class="form-group" style="display: none; margin-bottom: 0.5rem;">
+                            <label style="font-size: 0.75rem; color: var(--text-secondary);">User ID</label>
+                            <input type="text" class="profile-input" id="profileId" readonly>
+                        </div>
+                        <input type="text" class="profile-input" id="profileName" placeholder="Your Name"
+                            value="Guest User">
+                        <input type="email" class="profile-input" id="profileEmail" placeholder="Your Email"
+                            value="guest@example.com">
+                        <input type="tel" class="profile-input" id="profilePhone" placeholder="Phone Number">
+                        <input type="text" class="profile-input" id="profileLocation" placeholder="Location">
+                        <textarea class="profile-input" id="profileBio" placeholder="Tell us about yourself..."
+                            rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="profile-stats">
+                    <div class="profile-stat-item">
+                        <span class="stat-value" id="totalMessages">0</span>
+                        <span class="stat-label">Total Messages</span>
+                    </div>
+                    <div class="profile-stat-item">
+                        <span class="stat-value" id="totalChats">0</span>
+                        <span class="stat-label">Conversations</span>
+                    </div>
+                    <div class="profile-stat-item">
+                        <span class="stat-value" id="memberSince">Today</span>
+                        <span class="stat-label">Member Since</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="signOutBtn">Sign Out</button>
+                <button class="modal-btn primary" id="saveProfileBtn">Save Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast-container" id="toastContainer">
+        <!-- Toasts will be dynamically inserted here -->
+    </div>
+
+
+
+    <!-- File Upload Modal -->
+    <div class="modal-overlay" id="fileUploadModal">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2 class="modal-title">Attach File</h2>
+                <button class="modal-close-btn" id="closeFileUploadModal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="file-upload-area" id="fileUploadArea">
+                    <input type="file" id="fileInput" hidden multiple accept="image/*,.pdf,.doc,.docx,.txt">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <p class="upload-text">Drag and drop files here</p>
+                    <p class="upload-subtext">or click to browse</p>
+                    <p class="upload-formats">Supported: Images, PDF, DOC, TXT (Max 10MB)</p>
+                </div>
+                <div class="uploaded-files" id="uploadedFiles">
+                    <!-- Uploaded files will be shown here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="cancelUploadBtn">Cancel</button>
+                <button class="modal-btn primary" id="confirmUploadBtn" disabled>Attach Files</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2 class="modal-title" id="confirmTitle">Confirm Action</h2>
+                <button class="modal-close-btn" id="closeConfirmModal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="confirm-message" id="confirmMessage">Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn secondary" id="confirmCancelBtn">Cancel</button>
+                <button class="modal-btn danger" id="confirmOkBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+
+</html>
