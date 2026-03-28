@@ -83,7 +83,7 @@ loginForm.addEventListener('submit', async (e) => {
             localStorage.setItem('isLoggedIn', 'true');
             
             setTimeout(() => {
-                window.location.href = 'index.html';
+                window.location.href = 'dashboard.html';
             }, 1000);
         } else {
             showMsg(data.error || 'Login failed', 'error');

@@ -34,16 +34,6 @@ os.makedirs(DOCS_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['DOCS_FOLDER'] = DOCS_FOLDER
 
-@app.route('/')
-def index():
-    """Serves the login/auth page first."""
-    return send_from_directory('..', 'auth.html')
-
-@app.route('/<path:path>')
-def serve_static(path):
-    """Serves other static files (CSS, JS, etc.)."""
-    return send_from_directory('..', path)
-
 @app.route('/api/status')
 def status():
     return jsonify({

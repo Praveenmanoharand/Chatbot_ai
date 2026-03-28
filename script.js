@@ -2356,7 +2356,7 @@ function initEventListeners() {
         showConfirmModal('Sign Out', 'Are you sure you want to sign out?', () => {
             localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('nova_profile');
-            window.location.href = 'auth.html';
+            window.location.href = 'index.html';
         });
     });
 
