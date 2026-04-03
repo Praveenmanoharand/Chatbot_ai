@@ -2574,12 +2574,16 @@ function initVoiceInput() {
 
     let originalInputText = '';
     let speechDetected = false;
+    const voiceOverlay = document.getElementById('voiceRecordingOverlay');
+    const voiceText = document.getElementById('voiceTranscriptText');
 
     recognition.onstart = () => {
         isRecording = true;
         speechDetected = false;
         originalInputText = DOM.messageInput.value;
         DOM.voiceInputBtn.classList.add('recording');
+        if (voiceOverlay) voiceOverlay.classList.add('active');
+        if (voiceText) voiceText.textContent = 'Listening...';
         DOM.messageInput.placeholder = '🎙️ Listening... speak now';
         if (DOM.messageInput.disabled) return; // Don't allow during AI generation
     };
@@ -2595,6 +2599,10 @@ function initVoiceInput() {
             } else {
                 interimTranscript += transcript;
             }
+        }
+        
+        if (voiceText && (interimTranscript || finalTranscript)) {
+            voiceText.textContent = interimTranscript || finalTranscript;
         }
 
         // Construct the full text from the original text + the current spoken transcripts.
@@ -2653,6 +2661,10 @@ function stopVoiceInput() {
     isRecording = false;
     if (DOM.voiceInputBtn) DOM.voiceInputBtn.classList.remove('recording');
     if (DOM.messageInput) DOM.messageInput.placeholder = 'Type your message...';
+    
+    // Hide overlay
+    const voiceOverlay = document.getElementById('voiceRecordingOverlay');
+    if (voiceOverlay) voiceOverlay.classList.remove('active');
 }
 
 /**
