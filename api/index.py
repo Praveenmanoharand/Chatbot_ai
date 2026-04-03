@@ -62,7 +62,15 @@ def status():
 
 # Configuration
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 KNOWLEDGE_FILE = os.path.join(os.path.dirname(__file__), "..", "AI Knowledge.txt")
+
+GROQ_MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama3-70b-8192",
+    "llama3-8b-8192",
+    "mixtral-8x7b-32768"
+]
 
 FREE_MODELS = [
     "openrouter/free",
@@ -140,6 +148,49 @@ def call_openrouter(messages):
         return None, f"API error {response.status_code}"
 
     return None, "All models are currently rate-limited."
+
+def call_groq(messages):
+    """Try to call Groq API for lightning fast responses."""
+    if not GROQ_API_KEY:
+        return None, "Groq API key not configured."
+
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    for model in GROQ_MODELS:
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": 0.7,
+            "max_tokens": 1024,
+            "top_p": 1,
+            "stream": False
+        }
+        
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers=headers,
+                data=json.dumps(payload),
+                timeout=20
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if 'choices' in result and result['choices']:
+                    return result['choices'][0]['message']['content'], None
+            
+            # If rate limited or other error, try next model
+            if response.status_code in (429, 503, 500):
+                continue
+                
+        except Exception as e:
+            print(f"Groq API Error: {str(e)}")
+            continue
+
+    return None, "Groq models unavailable."
 
 @app.route('/api/register', methods=['POST'])
 def register():
@@ -337,7 +388,14 @@ def chat():
             # as it will be saved correctly once the real ID is synced.
             pass
 
-    bot_response, error = call_openrouter(messages)
+    # Try Groq first as it's faster and more reliable
+    bot_response, error = call_groq(messages)
+    
+    # Fallback to OpenRouter if Groq fails
+    if error:
+        print(f"Groq failed, falling back to OpenRouter: {error}")
+        bot_response, error = call_openrouter(messages)
+        
     if error: return jsonify({"error": error}), 503
     
     if conv_id and user_id:
