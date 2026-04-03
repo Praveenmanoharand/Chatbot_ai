@@ -2292,13 +2292,51 @@ function initEventListeners() {
     // Share chat
     if (DOM.shareBtn) {
         DOM.shareBtn.addEventListener('click', async () => {
-            if (!state.currentChatId) return;
+            if (!state.currentChatId) {
+                showToast('info', 'Cannot Share', 'Please send a message first to start a conversation.');
+                return;
+            }
+            
+            const shareTitle = 'Chat with Aura AI';
+            const shareText = 'Check out this conversation with Aura AI!';
             const shareLink = window.location.origin + '/shared/' + state.currentChatId;
+
+            // Try the native Web Share API first (mostly mobile/desktop Safari/Chrome)
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: shareTitle,
+                        text: shareText,
+                        url: shareLink,
+                    });
+                    showToast('success', 'Shared', 'Conversation shared successfully.');
+                    return;
+                } catch (err) {
+                    // Fail silently if aborted by user
+                    if (err.name === 'AbortError') return;
+                    console.error('Share API error:', err);
+                }
+            }
+
+            // Fallback: Copy to clipboard
             try {
-                await navigator.clipboard.writeText(shareLink);
-                showToast('success', 'Link Copied', 'Shareable link copied to clipboard.');
+                // Try modern clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(shareLink);
+                    showToast('success', 'Link Copied', 'Shareable link copied to clipboard.');
+                } else {
+                    // Manual fallback for non-secure contexts
+                    const textArea = document.createElement("textarea");
+                    textArea.value = shareLink;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(textArea);
+                    showToast('success', 'Link Copied', 'Shareable link copied to clipboard.');
+                }
             } catch (e) {
-                showToast('error', 'Error', 'Could not copy data.');
+                console.error('Fallback copy error:', e);
+                showToast('error', 'Error', 'Could not copy link to clipboard.');
             }
         });
     }

@@ -421,25 +421,157 @@ def shared_chat(conv_id):
     try:
         conv = conversations_collection.find_one({"_id": ObjectId(conv_id)})
         if not conv: return "Conversation not found", 404
+        
+        # Format messages for the template
+        formatted_messages = []
+        for msg in conv.get('messages', []):
+            role = msg.get('role', msg.get('sender', 'user'))
+            content = msg.get('content', msg.get('text', ''))
+            timestamp = msg.get('timestamp')
+            
+            # Basic time formatting if timestamp exists
+            time_str = ""
+            if timestamp:
+                if isinstance(timestamp, datetime.datetime):
+                    time_str = timestamp.strftime("%I:%M %p")
+                elif isinstance(timestamp, (int, float)):
+                    time_str = datetime.datetime.fromtimestamp(timestamp/1000).strftime("%I:%M %p")
+            
+            formatted_messages.append({
+                "role": 'user' if role == 'user' else 'bot',
+                "content": content,
+                "time": time_str
+            })
+
         return render_template_string("""
-            <html>
-                <head><title>{{ conv.title }} - Shared via Aura AI</title>
+            <!DOCTYPE html>
+            <html lang="en" data-theme="dark">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>{{ conv.title }} | Shared via Aura AI</title>
+                <!-- Reuse main app styles -->
                 <link rel="stylesheet" href="/style.css">
-                <style>body { padding: 50px; max-width: 800px; margin: auto; }</style></head>
-                <body data-theme="dark">
+                <!-- Font Awesome -->
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+                <!-- Google Fonts -->
+                <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+                
+                <style>
+                    body { 
+                        background-color: var(--bg-primary);
+                        color: var(--text-primary);
+                        margin: 0;
+                        display: flex;
+                        flex-direction: column;
+                        min-height: 100vh;
+                    }
+                    .shared-header {
+                        padding: var(--space-6);
+                        border-bottom: 1px solid var(--border-subtle);
+                        background: var(--bg-secondary);
+                        position: sticky;
+                        top: 0;
+                        z-index: 100;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        backdrop-filter: blur(10px);
+                    }
+                    .shared-header h1 {
+                        margin: 0;
+                        font-size: var(--text-xl);
+                        font-family: var(--font-display);
+                        color: var(--text-primary);
+                    }
+                    .shared-container {
+                        max-width: 850px;
+                        margin: 0 auto;
+                        padding: var(--space-8) var(--space-4);
+                        width: 100%;
+                        flex: 1;
+                    }
+                    .shared-footer {
+                        padding: var(--space-10);
+                        text-align: center;
+                        border-top: 1px solid var(--border-subtle);
+                        background: var(--bg-secondary);
+                    }
+                    .brand-logo {
+                        font-family: var(--font-display);
+                        color: var(--primary);
+                        font-weight: 700;
+                        font-size: 1.2rem;
+                        text-decoration: none;
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    }
+                    .cta-btn {
+                        display: inline-block;
+                        padding: 10px 25px;
+                        background: var(--primary);
+                        color: white;
+                        text-decoration: none;
+                        border-radius: var(--radius-full);
+                        font-weight: 600;
+                        margin-top: 20px;
+                        transition: all 0.3s ease;
+                    }
+                    .cta-btn:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 5px 15px var(--primary-alpha-40);
+                    }
+                    .message-meta {
+                        display: flex;
+                        gap: 8px;
+                        font-size: 0.75rem;
+                        color: var(--text-muted);
+                        margin-top: 5px;
+                    }
+                    /* Simple tweak for shared view */
+                    .message { opacity: 1; transform: none; }
+                </style>
+            </head>
+            <body>
+                <header class="shared-header">
+                    <a href="/" class="brand-logo">
+                        <i class="fas fa-robot"></i>
+                        Aura AI
+                    </a>
                     <h1>{{ conv.title }}</h1>
-                    <div id="messagesArea">
-                        {% for msg in conv.messages %}
+                    <div style="width: 100px;"></div> <!-- Spacer -->
+                </header>
+
+                <main class="shared-container">
+                    <div class="messages-area" style="padding: 0;">
+                        {% for msg in messages %}
                             <div class="message {{ msg.role }}">
-                                <strong>{{ 'User' if msg.role == 'user' else 'Aura AI' }}:</strong>
-                                <p>{{ msg.content }}</p>
+                                <div class="message-avatar">
+                                    <i class="fas {{ 'fa-user' if msg.role == 'user' else 'fa-robot' }}"></i>
+                                </div>
+                                <div class="message-content">
+                                    <div class="message-bubble">{{ msg.content }}</div>
+                                    <div class="message-meta">
+                                        <span>{{ 'You' if msg.role == 'user' else 'Aura AI' }}</span>
+                                        {% if msg.time %}<span>• {{ msg.time }}</span>{% endif %}
+                                    </div>
+                                </div>
                             </div>
                         {% endfor %}
                     </div>
-                </body>
+                </main>
+
+                <footer class="shared-footer">
+                    <p>This conversation was generated and shared via Aura AI.</p>
+                    <a href="/" class="cta-btn">Start Your Own Chat</a>
+                </footer>
+            </body>
             </html>
-        """, conv=conv)
-    except: return "Invalid ID", 400
+        """, conv=conv, messages=formatted_messages)
+    except Exception as e: 
+        print(f"Share error: {e}")
+        return "Invalid ID or Error loading shared chat", 400
 
 # Vercel entry point
 app_instance = app
