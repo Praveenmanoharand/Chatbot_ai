@@ -73,11 +73,9 @@ GROQ_MODELS = [
 ]
 
 FREE_MODELS = [
-    "openrouter/free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "google/gemma-3-27b-it:free",
     "google/gemma-3-12b-it:free",
-    "deepseek/deepseek-r1:free",
     "mistralai/mistral-small-24b-instruct-2501:free",
     "microsoft/phi-3-mini-128k-instruct:free",
 ]
@@ -116,38 +114,42 @@ def get_relevant_context(query, knowledge_base, top_n=3):
 
 def call_openrouter(messages):
     """Try each model in FREE_MODELS until one succeeds."""
+    if not OPENROUTER_API_KEY:
+        return None, "OpenRouter API key not configured."
+
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json"
     }
     
     for model in FREE_MODELS:
-        payload = {
-            "model": model,
-            "messages": messages
-        }
-        
-        response = requests.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers=headers,
-            data=json.dumps(payload),
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            try:
+        try:
+            payload = {
+                "model": model,
+                "messages": messages
+            }
+            
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                data=json.dumps(payload),
+                timeout=30
+            )
+            
+            if response.status_code == 200:
                 result = response.json()
                 if 'choices' in result and result['choices']:
                     return result['choices'][0]['message']['content'], None
-            except:
-                continue
-        
-        if response.status_code in (429, 503, 502, 500):
+            
+            # On ANY non-200 code, skip to the next model
+            print(f"OpenRouter model {model} failed with status {response.status_code}, trying next...")
             continue
-        
-        return None, f"API error {response.status_code}"
 
-    return None, "All models are currently rate-limited."
+        except Exception as e:
+            print(f"OpenRouter exception for {model}: {str(e)}")
+            continue
+
+    return None, "All OpenRouter models are currently unavailable."
 
 def call_groq(messages):
     """Try to call Groq API for lightning fast responses."""
@@ -182,12 +184,12 @@ def call_groq(messages):
                 if 'choices' in result and result['choices']:
                     return result['choices'][0]['message']['content'], None
             
-            # If rate limited or other error, try next model
-            if response.status_code in (429, 503, 500):
-                continue
+            # On ANY non-200 code, skip to the next model
+            print(f"Groq model {model} failed with status {response.status_code}, trying next...")
+            continue
                 
         except Exception as e:
-            print(f"Groq API Error: {str(e)}")
+            print(f"Groq API Error for {model}: {str(e)}")
             continue
 
     return None, "Groq models unavailable."
