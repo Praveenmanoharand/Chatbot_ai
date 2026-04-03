@@ -115,6 +115,9 @@ const DOM = {
     pinBtn: document.getElementById('pinBtn'),
     notificationsBtn: document.getElementById('notificationsBtn'),
     notificationBadge: document.getElementById('notificationBadge'),
+    mobileProfileBtn: document.getElementById('mobileProfileBtn'),
+    mobileProfileAvatar: document.getElementById('mobileProfileAvatar'),
+    mobileProfileIcon: document.getElementById('mobileProfileIcon'),
     
     // Messages
     messagesContainer: document.getElementById('messagesContainer'),
@@ -526,6 +529,13 @@ function loadProfileToUI() {
             DOM.sidebarProfileIcon.style.display = 'none';
         }
         
+        // Update Mobile Top Header Avatar
+        if (DOM.mobileProfileAvatar) {
+            DOM.mobileProfileAvatar.src = userAvatar;
+            DOM.mobileProfileAvatar.style.display = 'block';
+            DOM.mobileProfileIcon.style.display = 'none';
+        }
+        
         state.tempAvatar = userAvatar;
     } else {
         DOM.profileAvatarImg.style.display = 'none';
@@ -534,6 +544,11 @@ function loadProfileToUI() {
         if (DOM.sidebarProfileAvatar) {
             DOM.sidebarProfileAvatar.style.display = 'none';
             DOM.sidebarProfileIcon.style.display = 'block';
+        }
+
+        if (DOM.mobileProfileAvatar) {
+            DOM.mobileProfileAvatar.style.display = 'none';
+            DOM.mobileProfileIcon.style.display = 'block';
         }
         
         state.tempAvatar = null;
@@ -2297,6 +2312,17 @@ function initEventListeners() {
         loadSettingsToUI();
         openModal('settings');
     });
+
+    // Mobile Profile Button in Header
+    if (DOM.mobileProfileBtn) {
+        DOM.mobileProfileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadProfileToUI();
+            updateStatsUI();
+            openModal('profile');
+        });
+    }
+
     DOM.closeSettingsModal.addEventListener('click', () => closeModal('settings'));
     DOM.saveSettingsBtn.addEventListener('click', () => saveSettingsFromUI());
     DOM.resetSettingsBtn.addEventListener('click', () => resetSettings());

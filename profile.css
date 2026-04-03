@@ -222,16 +222,51 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+    .profile-container {
+        padding: var(--space-4) var(--space-3);
+    }
+
     .profile-header-large {
         flex-direction: column;
         text-align: center;
+        gap: var(--space-4);
     }
     
+    .avatar-large-wrapper {
+        width: 140px; /* Larger on mobile for better visibility */
+        height: 140px;
+    }
+
+    .profile-info-large h2 {
+        font-size: 1.5rem;
+    }
+
     .profile-actions-header {
-        margin: var(--space-4) 0 0 0;
+        margin: var(--space-2) 0 0 0;
+        width: 100%;
+        display: flex;
+        justify-content: center;
     }
     
     .preferences-grid {
         grid-template-columns: 1fr;
+    }
+
+    .section-card {
+        padding: var(--space-5);
+    }
+
+    .stat-card {
+        padding: var(--space-4);
+    }
+}
+
+@media (max-width: 480px) {
+    .badge-row {
+        justify-content: center;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem;
     }
 }

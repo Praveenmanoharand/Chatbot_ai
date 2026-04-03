@@ -16,6 +16,6 @@ pip install -r requirements.txt
 
 echo [INFO] Starting Flask server...
 echo [INFO] Chatbot will be available at http://localhost:5000
-python app.py
+python api/index.py
 
 pause

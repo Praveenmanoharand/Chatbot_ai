@@ -48,6 +48,10 @@ except OSError:
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['DOCS_FOLDER'] = DOCS_FOLDER
 
+@app.route('/')
+def home():
+    return send_from_directory(app.static_folder, 'index.html')
+
 @app.route('/api/status')
 def status():
     return jsonify({
