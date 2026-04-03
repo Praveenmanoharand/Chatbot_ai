@@ -3172,7 +3172,19 @@ RESPONSIVE STYLES
     .modal {
         width: 100%;
         margin: var(--space-2);
-        max-height: 95vh;
+        max-height: 85vh;
+    }
+    
+    /* Specific fix for Settings Modal clipping on mobile */
+    #settingsModal {
+        align-items: flex-start;
+        padding-top: 8vh;
+        padding-bottom: 8vh;
+    }
+    
+    #settingsModal .modal {
+        max-height: 80vh;
+        margin: 0 auto;
     }
 
     .modal-body {
