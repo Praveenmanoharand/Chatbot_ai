@@ -446,7 +446,13 @@ async function fetchConversations() {
                 id: c._id,
                 title: c.title,
                 timestamp: c.updated_at,
-                messages: c.messages,
+                // Ensure backend messages are mapped to frontend fields
+                messages: (c.messages || []).map(m => ({
+                    id: generateId(),
+                    sender: m.role || 'bot',
+                    text: m.content || '',
+                    timestamp: m.timestamp ? new Date(m.timestamp).getTime() : Date.now()
+                })).filter(m => m.text), // Filter out any empty messages
                 is_pinned: c.is_pinned,
                 is_archived: c.is_archived
             }));
@@ -619,12 +625,16 @@ function createHistoryItem(chat) {
     item.className = `history-item ${chat.id === state.currentChatId ? 'active' : ''}`;
     item.dataset.chatId = chat.id;
 
+    const lastMessage = chat.messages && chat.messages.length > 0 ? chat.messages[chat.messages.length - 1] : null;
+    const previewText = lastMessage ? lastMessage.text : 'No messages yet';
+
     item.innerHTML = `
         <div class="history-item-icon">
             <i class="fas ${chat.is_pinned ? 'fa-thumbtack' : 'fa-comment-alt'}"></i>
         </div>
         <div class="history-item-content">
             <div class="history-item-title">${escapeHtml(chat.title)}</div>
+            <div class="history-item-preview">${escapeHtml(previewText)}</div>
         </div>
         <span class="history-item-time">${formatDate(new Date(chat.timestamp))}</span>
         <div class="history-item-actions">
@@ -661,23 +671,31 @@ function createHistoryItem(chat) {
         input.select();
         
         const saveRename = async () => {
+            if (chat.isSyncing) {
+                showToast('info', 'Wait...', 'Still saving new conversation.');
+                return;
+            }
             const newTitle = input.value.trim();
             if (newTitle && newTitle !== currentTitle) {
+                // Optimistic UI: update local state and DOM immediately
+                chat.title = newTitle;
+                titleEl.textContent = newTitle;
+                input.replaceWith(titleEl);
+                
                 try {
                     const response = await fetch(`/api/conversations/${chat.id}`, {
                         method: 'PATCH',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ title: newTitle })
                     });
-                    if (response.ok) {
-                        chat.title = newTitle;
-                        input.replaceWith(titleEl);
-                        titleEl.textContent = newTitle;
-                        showToast('success', 'Chat Renamed', 'Title updated successfully.');
-                    }
+                    if (!response.ok) throw new Error('Rename failed');
+                    // showToast('success', 'Chat Renamed', 'Title updated successfully.');
                 } catch (e) {
-                    showToast('error', 'Error', 'Failed to rename chat.');
-                    input.replaceWith(titleEl);
+                    console.error('Failed to sync rename:', e);
+                    // Rollback on error
+                    chat.title = currentTitle;
+                    titleEl.textContent = currentTitle;
+                    showToast('error', 'Sync Error', 'Failed to save new title.');
                 }
             } else {
                 input.replaceWith(titleEl);
@@ -738,43 +756,19 @@ async function createNewChat() {
         return;
     }
 
-    try {
-        const response = await fetch('/api/conversations', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: state.profile.user_id, title: 'New Chat' })
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            const chatId = data.conversation_id;
-            
-            const newChat = {
-                id: chatId,
-                title: 'New Chat',
-                timestamp: new Date().toISOString(),
-                messages: [],
-                is_pinned: false,
-                is_archived: false
-            };
+    // Just prepare the UI for a new chat without saving to DB yet.
+    // The conversation will be created on the first message sent.
+    state.currentChatId = null;
+    state.messages = [];
 
-            state.chatHistory.unshift(newChat);
-            state.currentChatId = chatId;
-            state.messages = [];
+    renderHistory(); // Will show active state correctly if we handle null in renderHistory
+    clearMessages();
+    showWelcomeScreen();
+    toggleSidebar(false);
 
-            renderHistory();
-            clearMessages();
-            showWelcomeScreen();
-            toggleSidebar(false);
-
-            // Update stats
-            state.stats.totalChats++;
-            saveStats();
-            updateStatsUI();
-        }
-    } catch (e) {
-        showToast('error', 'Error', 'Could not create a new conversation.');
-    }
+    // Reset character count and state
+    DOM.messageInput.value = '';
+    handleInputChange();
 }
 
 /**
@@ -806,25 +800,55 @@ function deleteChat(chatId) {
         'Delete Chat',
         'Are you sure you want to delete this conversation? This action cannot be undone.',
         async () => {
+            if (chatId.toString().startsWith('id_')) {
+                // If ID is still temporary, just remove locally 
+                // and skip backend call (since it hasn't reached DB yet)
+                state.chatHistory = state.chatHistory.filter(c => c.id !== chatId);
+                if (state.currentChatId === chatId) {
+                    state.currentChatId = null;
+                    state.messages = [];
+                    showWelcomeScreen();
+                }
+                renderHistory();
+                return;
+            }
+
+            // Store backup for potential rollback
+            const chatIndex = state.chatHistory.findIndex(c => c.id === chatId);
+            const deletedChat = state.chatHistory[chatIndex];
+            
+            // Optimistic UI: Remove immediately
+            state.chatHistory = state.chatHistory.filter(c => c.id !== chatId);
+            if (state.currentChatId === chatId) {
+                state.currentChatId = null;
+                state.messages = [];
+                showWelcomeScreen();
+            }
+            renderHistory();
+
             try {
                 const response = await fetch(`/api/conversations/${chatId}`, {
                     method: 'DELETE'
                 });
                 
-                if (response.ok) {
-                    state.chatHistory = state.chatHistory.filter(c => c.id !== chatId);
-
-                    if (state.currentChatId === chatId) {
-                        state.currentChatId = null;
-                        state.messages = [];
-                        showWelcomeScreen();
-                    }
-
-                    renderHistory();
-                    showToast('success', 'Chat Deleted', 'The conversation has been removed.');
+                if (!response.ok) {
+                    throw new Error('Server deletion failed');
                 }
+                
+                // Update stats locally
+                state.stats.totalChats = Math.max(0, state.stats.totalChats - 1);
+                saveStats();
+                updateStatsUI();
+                
+                showToast('success', 'Chat Deleted', 'The conversation has been removed.');
             } catch (e) {
-                showToast('error', 'Delete Error', 'Could not delete the conversation.');
+                console.error('Failed to delete chat:', e);
+                // Rollback on failure
+                if (chatIndex !== -1) {
+                    state.chatHistory.splice(chatIndex, 0, deletedChat);
+                    renderHistory();
+                }
+                showToast('error', 'Delete Error', 'Could not delete the conversation from server.');
             }
         }
     );
@@ -874,13 +898,19 @@ async function updateCurrentChat() {
     const chat = state.chatHistory.find(c => c.id === state.currentChatId);
     if (!chat) return;
 
-    // Update title based on first user message if still default
+    // Update local timestamp to keep it at the top of the history list
+    chat.timestamp = new Date().toISOString();
+
+    // Update title based on first user message if it's currently at default
     const firstUserMessage = state.messages.find(m => m.sender === 'user');
     if (firstUserMessage && (chat.title === 'New Chat' || chat.title === '')) {
         const newTitle = firstUserMessage.text.substring(0, 30) + (firstUserMessage.text.length > 30 ? '...' : '');
         chat.title = newTitle;
         
-        // Sync title to backend
+        // Refresh UI immediately for instant feedback
+        renderHistory();
+        
+        // Sync title to backend in the background
         try {
             await fetch(`/api/conversations/${state.currentChatId}`, {
                 method: 'PATCH',
@@ -890,9 +920,10 @@ async function updateCurrentChat() {
         } catch (e) {
             console.error('Failed to sync title:', e);
         }
+    } else {
+        // Just refresh the list to reflect timestamp/active state
+        renderHistory();
     }
-
-    renderHistory();
 }
 
 // =====================================================
@@ -985,9 +1016,6 @@ function createMessageElement(message) {
                         <i class="fas fa-redo"></i>
                     </button>
                 ` : ''}
-                <button class="message-action-btn" data-action="delete" title="Delete">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
             </div>
         </div>
     `;
@@ -1044,9 +1072,6 @@ async function typewriterEffect(message) {
                 </button>
                 <button class="message-action-btn" data-action="regenerate" title="Regenerate">
                     <i class="fas fa-redo"></i>
-                </button>
-                <button class="message-action-btn" data-action="delete" title="Delete">
-                    <i class="fas fa-trash-alt"></i>
                 </button>
             </div>
         </div>
@@ -1320,6 +1345,43 @@ async function sendMessage() {
 
     if (!text || state.isTyping || text.length > CONFIG.MAX_MESSAGE_LENGTH) return;
 
+    // Handle initial conversation creation if this is the first message
+    if (!state.currentChatId) {
+        try {
+            const resp = await fetch('/api/conversations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: state.profile.user_id, title: text.substring(0, 30) || 'New Chat' })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                state.currentChatId = data.conversation_id;
+                
+                const newChat = {
+                    id: state.currentChatId,
+                    title: text.substring(0, 30) || 'New Chat',
+                    timestamp: new Date().toISOString(),
+                    messages: [],
+                    is_pinned: false,
+                    is_archived: false,
+                    isSyncing: false
+                };
+                state.chatHistory.unshift(newChat);
+                renderHistory();
+                
+                // Update stats
+                state.stats.totalChats++;
+                saveStats();
+                updateStatsUI();
+            } else {
+                throw new Error('Failed to start conversation');
+            }
+        } catch (e) {
+            console.error('Error starting conversation:', e);
+            showToast('error', 'Connection Error', 'Could not sync conversation with server.');
+            return;
+        }
+    }
 
     // Capture file context before clearing
     const fileContext = state.pendingFileContext;
@@ -1595,7 +1657,6 @@ function toggleEmojiPicker(show = null) {
     DOM.emojiBtn.classList.toggle('active', shouldShow);
     
     if (shouldShow) {
-        showToast('info', 'Emoji Picker', 'Opening emojis...');
         renderEmojis();
         setTimeout(() => DOM.emojiSearch.focus(), 100);
     }
@@ -1759,8 +1820,7 @@ function formatFileSize(bytes) {
  */
 async function confirmFileUpload() {
     if (state.attachedFiles.length === 0) return;
-
-    showToast('info', 'Uploading Files', 'Analyzing your documents...');
+    
     let consolidatedText = "";
 
     try {
@@ -1793,7 +1853,6 @@ async function confirmFileUpload() {
         closeModal('fileUpload');
         
         renderFilePreview();
-        showToast('success', 'Files Ready', 'You can now ask questions about these files.');
     } catch (e) {
         showToast('error', 'Upload Error', 'Failed to process files.');
     }
@@ -2321,7 +2380,7 @@ function initEventListeners() {
     // Voice input (just a placeholder)
     if (DOM.voiceInputBtn) {
         DOM.voiceInputBtn.addEventListener('click', () => {
-            showToast('info', 'Voice Input', 'Voice recognition is not available in your browser.');
+            // Voice input removed
         });
     }
 

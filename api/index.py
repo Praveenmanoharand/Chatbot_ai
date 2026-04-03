@@ -251,12 +251,19 @@ def create_conversation():
         "updated_at": datetime.datetime.now()
     }
     result = conversations_collection.insert_one(new_conv)
+    # Increment user's total_chats statistic
+    users_collection.update_one({"user_id": data.get('user_id')}, {"$inc": {"total_chats": 1}})
     return jsonify({"conversation_id": str(result.inserted_id)})
 
 @app.route('/api/conversations/<conv_id>', methods=['GET'])
 def get_conversation_details(conv_id):
     from bson.objectid import ObjectId
-    conv = conversations_collection.find_one({"_id": ObjectId(conv_id)})
+    try:
+        obj_id = ObjectId(conv_id)
+    except:
+        return jsonify({"error": "Invalid conversation ID format"}), 400
+        
+    conv = conversations_collection.find_one({"_id": obj_id})
     if not conv: return jsonify({"error": "Not found"}), 404
     conv['_id'] = str(conv['_id'])
     return jsonify(conv)
@@ -264,16 +271,32 @@ def get_conversation_details(conv_id):
 @app.route('/api/conversations/<conv_id>', methods=['PATCH'])
 def update_conversation(conv_id):
     from bson.objectid import ObjectId
+    try:
+        obj_id = ObjectId(conv_id)
+    except:
+        return jsonify({"error": "Invalid conversation ID format"}), 400
+        
     data = request.json
     update_data = {k: v for k, v in data.items() if k in ['is_pinned', 'is_archived', 'title']}
     update_data['updated_at'] = datetime.datetime.now()
-    conversations_collection.update_one({"_id": ObjectId(conv_id)}, {"$set": update_data})
+    conversations_collection.update_one({"_id": obj_id}, {"$set": update_data})
     return jsonify({"success": True})
 
 @app.route('/api/conversations/<conv_id>', methods=['DELETE'])
 def delete_conversation(conv_id):
     from bson.objectid import ObjectId
-    conversations_collection.delete_one({"_id": ObjectId(conv_id)})
+    try:
+        obj_id = ObjectId(conv_id)
+    except:
+        return jsonify({"error": "Invalid conversation ID format"}), 400
+        
+    # Find conversation first to get user_id for stat decrement
+    conv = conversations_collection.find_one({"_id": obj_id})
+    if conv:
+        conversations_collection.delete_one({"_id": obj_id})
+        # Decrement user's total_chats statistic
+        users_collection.update_one({"user_id": conv['user_id']}, {"$inc": {"total_chats": -1}})
+        
     return jsonify({"success": True})
 
 @app.route('/api/notifications', methods=['GET'])
@@ -298,17 +321,37 @@ def chat():
     system_prompt = f"You are 'Aura AI', a premium AI Expert.\nContext:\n{full_context}"
     messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_message}]
     
+    if conv_id and user_id:
+        from bson.objectid import ObjectId
+        try:
+            obj_id = ObjectId(conv_id)
+            # Save User Message IMMEDIATELY to avoid data loss before AI call
+            user_msg = {"role": "user", "content": user_message, "timestamp": datetime.datetime.now()}
+            conversations_collection.update_one(
+                {"_id": obj_id}, 
+                {"$push": {"messages": user_msg}, "$set": {"updated_at": datetime.datetime.now()}}
+            )
+            users_collection.update_one({"user_id": user_id}, {"$inc": {"total_messages": 1}})
+        except:
+            # If ID is invalid (e.g. temporary frontend ID), we skip saving for now 
+            # as it will be saved correctly once the real ID is synced.
+            pass
+
     bot_response, error = call_openrouter(messages)
     if error: return jsonify({"error": error}), 503
     
     if conv_id and user_id:
         from bson.objectid import ObjectId
-        new_msgs = [
-            {"role": "user", "content": user_message, "timestamp": datetime.datetime.now()},
-            {"role": "bot", "content": bot_response, "timestamp": datetime.datetime.now()}
-        ]
-        conversations_collection.update_one({"_id": ObjectId(conv_id)}, {"$push": {"messages": {"$each": new_msgs}}, "$set": {"updated_at": datetime.datetime.now()}})
-        users_collection.update_one({"user_id": user_id}, {"$inc": {"total_messages": 1}})
+        try:
+            obj_id = ObjectId(conv_id)
+            # Save Bot Response independently after generation
+            bot_msg = {"role": "bot", "content": bot_response, "timestamp": datetime.datetime.now()}
+            conversations_collection.update_one(
+                {"_id": obj_id}, 
+                {"$push": {"messages": bot_msg}, "$set": {"updated_at": datetime.datetime.now()}}
+            )
+        except:
+            pass
     
     return jsonify({"response": bot_response})
 
