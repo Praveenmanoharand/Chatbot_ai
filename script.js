@@ -2572,8 +2572,13 @@ function initVoiceInput() {
     recognition.interimResults = true;   // Show words as user speaks
     recognition.lang = state.settings.voiceLanguage || 'en-US'; // Use setting language
 
+    let originalInputText = '';
+    let speechDetected = false;
+
     recognition.onstart = () => {
         isRecording = true;
+        speechDetected = false;
+        originalInputText = DOM.messageInput.value;
         DOM.voiceInputBtn.classList.add('recording');
         DOM.messageInput.placeholder = '🎙️ Listening... speak now';
         if (DOM.messageInput.disabled) return; // Don't allow during AI generation
@@ -2592,26 +2597,15 @@ function initVoiceInput() {
             }
         }
 
-        // Show interim result in real-time as user speaks
-        if (interimTranscript) {
-            DOM.messageInput.value = interimTranscript;
-            handleInputChange();
-        }
-
-            // Final result - clean up and place in input
-        if (finalTranscript) {
-            const currentText = DOM.messageInput.value;
-            // Append if there's already text, otherwise replace
-            const separator = currentText.trim() && !currentText.endsWith(' ') ? ' ' : '';
-            DOM.messageInput.value = (currentText.trim() ? currentText.trim() + separator : '') + finalTranscript.trim();
-            handleInputChange();
-            DOM.messageInput.focus();
-            
-            if (state.settings.autoSendVoice) {
-                setTimeout(() => {
-                    sendMessage();
-                }, 300); // slight delay before send
-            }
+        // Construct the full text from the original text + the current spoken transcripts.
+        const separator = originalInputText.trim() && !originalInputText.endsWith(' ') ? ' ' : '';
+        const baseContent = originalInputText.trim() ? originalInputText.trim() + separator : '';
+        
+        DOM.messageInput.value = baseContent + finalTranscript + interimTranscript;
+        handleInputChange();
+        
+        if (finalTranscript || interimTranscript) {
+            speechDetected = true;
         }
     };
 
@@ -2628,6 +2622,14 @@ function initVoiceInput() {
 
     recognition.onend = () => {
         stopVoiceInput();
+        DOM.messageInput.focus();
+        
+        // If we picked up some speech and auto-send is enabled, send it!
+        if (speechDetected && state.settings.autoSendVoice) {
+            setTimeout(() => {
+                sendMessage();
+            }, 300);
+        }
     };
 
     DOM.voiceInputBtn.addEventListener('click', () => {
