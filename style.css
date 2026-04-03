@@ -716,26 +716,40 @@ body {
     justify-content: center;
     background: transparent;
     border: none;
-    color: var(--text-tertiary);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    opacity: 0;
     transition: all var(--transition-fast);
 }
 
-.history-item:hover .history-item-delete {
-    opacity: 1;
+.history-item-rename {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
 }
 
 .history-item-actions {
     display: flex;
     gap: var(--space-1);
-    opacity: 0;
-    transition: opacity var(--transition-fast);
+    opacity: 0.4; /* Slightly visible for all items */
+    transition: all var(--transition-fast);
 }
 
-.history-item:hover .history-item-actions {
-    opacity: 1;
+.history-item:hover .history-item-actions,
+.history-item.active .history-item-actions {
+    opacity: 1; /* Fully visible on hover or active */
+}
+
+/* Make action buttons scale slightly on hover */
+.history-item-rename:hover,
+.history-item-delete:hover {
+    transform: scale(1.1);
 }
 
 .history-item-rename,
@@ -747,7 +761,7 @@ body {
     justify-content: center;
     background: transparent;
     border: none;
-    color: var(--text-tertiary);
+    color: white !important; /* Make both rename and delete icons white for visibility */
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all var(--transition-fast);
