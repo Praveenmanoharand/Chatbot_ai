@@ -3231,16 +3231,17 @@ RESPONSIVE STYLES
     }
 
     .footer-actions {
-        gap: 0;
+        gap: var(--space-1);
     }
 
     .footer-action-btn span {
-        display: none;
+        display: block;
+        font-size: var(--text-sm);
     }
 
     .footer-action-btn {
-        justify-content: center;
-        padding: var(--space-3);
+        justify-content: flex-start;
+        padding: var(--space-3) var(--space-4);
     }
 }
 

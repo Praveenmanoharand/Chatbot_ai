@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <script>
         // Theme initialization - Must be first to prevent flash
-        (function() {
+        (function () {
             const settings = localStorage.getItem('nova_settings');
             let isDark = true;
             if (settings) {
@@ -69,7 +70,8 @@
             </div>
 
             <div class="sidebar-actions">
-                <a href="index.html" class="new-chat-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                <a href="index.html" class="new-chat-btn"
+                    style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
                     <i class="fas fa-comment-dots"></i>
                     <span>Back to Chat</span>
                 </a>
@@ -140,46 +142,6 @@
                                 <button class="action-btn-line" id="editProfileBtn">
                                     <i class="fas fa-edit"></i> Edit Profile
                                 </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Stats Grid -->
-                    <div class="stats-grid">
-                        <div class="section-card stat-card">
-                            <div class="stat-icon message-icon">
-                                <i class="fas fa-paper-plane"></i>
-                            </div>
-                            <div class="stat-details">
-                                <span class="stat-value" id="totalMessagesStat">0</span>
-                                <span class="stat-label">Total Messages</span>
-                            </div>
-                        </div>
-                        <div class="section-card stat-card">
-                            <div class="stat-icon chat-icon">
-                                <i class="fas fa-comments"></i>
-                            </div>
-                            <div class="stat-details">
-                                <span class="stat-value" id="totalChatsStat">0</span>
-                                <span class="stat-label">Conversations</span>
-                            </div>
-                        </div>
-                        <div class="section-card stat-card">
-                            <div class="stat-icon active-icon">
-                                <i class="fas fa-bolt"></i>
-                            </div>
-                            <div class="stat-details">
-                                <span class="stat-value" id="daysActiveStat">Today</span>
-                                <span class="stat-label">Member Since</span>
-                            </div>
-                        </div>
-                        <div class="section-card stat-card">
-                            <div class="stat-icon storage-icon">
-                                <i class="fas fa-database"></i>
-                            </div>
-                            <div class="stat-details">
-                                <span class="stat-value">12.4 KB</span>
-                                <span class="stat-label">Data Stored</span>
                             </div>
                         </div>
                     </div>

@@ -168,9 +168,9 @@ function updateThemeIcon(theme) {
 
 function setupEventListeners() {
     // Sidebar Toggles
-    DOM.menuToggleBtn.addEventListener('click', () => toggleSidebar(true));
-    DOM.closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
-    DOM.sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+    if (DOM.menuToggleBtn) DOM.menuToggleBtn.addEventListener('click', () => toggleSidebar(true));
+    if (DOM.closeSidebarBtn) DOM.closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+    if (DOM.sidebarOverlay) DOM.sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
 
     // Theme Toggles
     if (DOM.themeToggleBtn) {
@@ -203,8 +203,8 @@ function setupEventListeners() {
     }
 
     // Upload interactions
-    DOM.browseBtn.addEventListener('click', () => DOM.imageInput.click());
-    DOM.imageInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+    if (DOM.browseBtn) DOM.browseBtn.addEventListener('click', () => DOM.imageInput.click());
+    if (DOM.imageInput) DOM.imageInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
 
     // Drag and drop
     DOM.dropZone.addEventListener('dragover', (e) => {
@@ -255,7 +255,7 @@ function setupEventListeners() {
     });
 
     // Restart
-    DOM.restartBtn.addEventListener('click', resetAnalyzer);
+    if (DOM.restartBtn) DOM.restartBtn.addEventListener('click', resetAnalyzer);
 
     // Profile Actions
     if (DOM.profileBtn) {

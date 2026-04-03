@@ -2030,11 +2030,11 @@ function removeToast(toast) {
  * Update stats UI
  */
 function updateStatsUI() {
-    DOM.totalMessagesEl.textContent = state.stats.totalMessages;
-    DOM.totalChatsEl.textContent = state.stats.totalChats;
+    if (DOM.totalMessagesEl) DOM.totalMessagesEl.textContent = state.stats.totalMessages;
+    if (DOM.totalChatsEl) DOM.totalChatsEl.textContent = state.stats.totalChats;
 
     // Update member since date
-    if (state.stats.lastActiveDate) {
+    if (state.stats.lastActiveDate && DOM.memberSinceEl) {
         DOM.memberSinceEl.textContent = formatDate(new Date(state.stats.lastActiveDate));
     }
 }
@@ -2172,25 +2172,29 @@ function initQuickActions() {
 
 function initEventListeners() {
     // Sidebar toggle
-    DOM.menuToggleBtn.addEventListener('click', () => toggleSidebar(true));
-    DOM.closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
-    DOM.sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+    if (DOM.menuToggleBtn) DOM.menuToggleBtn.addEventListener('click', () => toggleSidebar(true));
+    if (DOM.closeSidebarBtn) DOM.closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+    if (DOM.sidebarOverlay) DOM.sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
 
     // New chat
-    DOM.newChatBtn.addEventListener('click', () => createNewChat());
+    if (DOM.newChatBtn) DOM.newChatBtn.addEventListener('click', () => createNewChat());
 
     // Search history
-    DOM.searchInput.addEventListener('input', (e) => searchHistory(e.target.value));
-    DOM.searchClearBtn.addEventListener('click', () => {
-        DOM.searchInput.value = '';
-        searchHistory('');
-    });
+    if (DOM.searchInput) {
+        DOM.searchInput.addEventListener('input', (e) => searchHistory(e.target.value));
+    }
+    if (DOM.searchClearBtn) {
+        DOM.searchClearBtn.addEventListener('click', () => {
+            if (DOM.searchInput) DOM.searchInput.value = '';
+            searchHistory('');
+        });
+    }
 
     // Clear all history
-    DOM.clearHistoryBtn.addEventListener('click', () => clearAllHistory());
+    if (DOM.clearHistoryBtn) DOM.clearHistoryBtn.addEventListener('click', () => clearAllHistory());
 
     // Theme toggle
-    DOM.themeToggleBtn.addEventListener('click', () => toggleTheme());
+    if (DOM.themeToggleBtn) DOM.themeToggleBtn.addEventListener('click', () => toggleTheme());
 
     // Mobile header menu
     if (DOM.mobileMenuBtn && DOM.headerActions) {
@@ -2210,108 +2214,124 @@ function initEventListeners() {
     }
 
     // Share chat
-    DOM.shareBtn.addEventListener('click', async () => {
-        if (!state.currentChatId) return;
-        const shareLink = window.location.origin + '/shared/' + state.currentChatId;
-        try {
-            await navigator.clipboard.writeText(shareLink);
-            showToast('success', 'Link Copied', 'Shareable link copied to clipboard.');
-        } catch (e) {
-            showToast('error', 'Error', 'Could not copy data.');
-        }
-    });
+    if (DOM.shareBtn) {
+        DOM.shareBtn.addEventListener('click', async () => {
+            if (!state.currentChatId) return;
+            const shareLink = window.location.origin + '/shared/' + state.currentChatId;
+            try {
+                await navigator.clipboard.writeText(shareLink);
+                showToast('success', 'Link Copied', 'Shareable link copied to clipboard.');
+            } catch (e) {
+                showToast('error', 'Error', 'Could not copy data.');
+            }
+        });
+    }
 
     // Archive chat
-    DOM.archiveBtn.addEventListener('click', async () => {
-        if (!state.currentChatId) return;
-        const chat = state.chatHistory.find(c => c.id === state.currentChatId);
-        if (!chat) return;
-        
-        const newStatus = !chat.is_archived;
-        try {
-            const response = await fetch(`/api/conversations/${state.currentChatId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_archived: newStatus })
-            });
-            if (response.ok) {
-                chat.is_archived = newStatus;
-                showToast('success', newStatus ? 'Chat Archived' : 'Chat Unarchived', 'Status updated successfully.');
-                renderHistory();
+    if (DOM.archiveBtn) {
+        DOM.archiveBtn.addEventListener('click', async () => {
+            if (!state.currentChatId) return;
+            const chat = state.chatHistory.find(c => c.id === state.currentChatId);
+            if (!chat) return;
+            
+            const newStatus = !chat.is_archived;
+            try {
+                const response = await fetch(`/api/conversations/${state.currentChatId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_archived: newStatus })
+                });
+                if (response.ok) {
+                    chat.is_archived = newStatus;
+                    showToast('success', newStatus ? 'Chat Archived' : 'Chat Unarchived', 'Status updated successfully.');
+                    renderHistory();
+                }
+            } catch (e) {
+                showToast('error', 'Error', 'Failed to update status.');
             }
-        } catch (e) {
-            showToast('error', 'Error', 'Failed to update status.');
-        }
-    });
+        });
+    }
 
     // Pin chat
-    DOM.pinBtn.addEventListener('click', async () => {
-        if (!state.currentChatId) return;
-        const chat = state.chatHistory.find(c => c.id === state.currentChatId);
-        if (!chat) return;
-        
-        const newStatus = !chat.is_pinned;
-        try {
-            const response = await fetch(`/api/conversations/${state.currentChatId}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ is_pinned: newStatus })
-            });
-            if (response.ok) {
-                chat.is_pinned = newStatus;
-                showToast('success', newStatus ? 'Chat Pinned' : 'Chat Unpinned', 'Status updated successfully.');
-                renderHistory();
+    if (DOM.pinBtn) {
+        DOM.pinBtn.addEventListener('click', async () => {
+            if (!state.currentChatId) return;
+            const chat = state.chatHistory.find(c => c.id === state.currentChatId);
+            if (!chat) return;
+            
+            const newStatus = !chat.is_pinned;
+            try {
+                const response = await fetch(`/api/conversations/${state.currentChatId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_pinned: newStatus })
+                });
+                if (response.ok) {
+                    chat.is_pinned = newStatus;
+                    showToast('success', newStatus ? 'Chat Pinned' : 'Chat Unpinned', 'Status updated successfully.');
+                    renderHistory();
+                }
+            } catch (e) {
+                showToast('error', 'Error', 'Failed to update status.');
             }
-        } catch (e) {
-            showToast('error', 'Error', 'Failed to update status.');
-        }
-    });
+        });
+    }
 
     // Notifications
-    DOM.notificationsBtn.addEventListener('click', async () => {
-        await fetchNotifications();
-        showToast('info', 'Notifications', 'Checking for new alerts...');
-    });
+    if (DOM.notificationsBtn) {
+        DOM.notificationsBtn.addEventListener('click', async () => {
+            await fetchNotifications();
+            showToast('info', 'Notifications', 'Checking for new alerts...');
+        });
+    }
 
     // Scroll to bottom
-    DOM.messagesContainer.addEventListener('scroll', throttle(handleScroll, 100));
-    DOM.scrollToBottomBtn.addEventListener('click', () => {
-        scrollToBottom(true);
-        resetUnreadCount();
-    });
+    if (DOM.messagesContainer) DOM.messagesContainer.addEventListener('scroll', throttle(handleScroll, 100));
+    if (DOM.scrollToBottomBtn) {
+        DOM.scrollToBottomBtn.addEventListener('click', () => {
+            scrollToBottom(true);
+            resetUnreadCount();
+        });
+    }
 
     // Message input
-    DOM.messageInput.addEventListener('input', handleInputChange);
-    DOM.messageInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
+    if (DOM.messageInput) {
+        DOM.messageInput.addEventListener('input', handleInputChange);
+        DOM.messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
 
     // Send button
-    DOM.sendBtn.addEventListener('click', () => sendMessage());
+    if (DOM.sendBtn) DOM.sendBtn.addEventListener('click', () => sendMessage());
 
     // Stop button
-    DOM.stopBtn.addEventListener('click', () => stopGeneration());
+    if (DOM.stopBtn) DOM.stopBtn.addEventListener('click', () => stopGeneration());
 
     // Pause button
-    DOM.pauseBtn.addEventListener('click', () => togglePause());
+    if (DOM.pauseBtn) DOM.pauseBtn.addEventListener('click', () => togglePause());
 
     // Attachment & Emoji actions
-    DOM.attachFileBtn.addEventListener('click', () => openModal('fileUpload'));
-    DOM.emojiBtn.addEventListener('click', () => toggleEmojiPicker());
+    if (DOM.attachFileBtn) DOM.attachFileBtn.addEventListener('click', () => openModal('fileUpload'));
+    if (DOM.emojiBtn) DOM.emojiBtn.addEventListener('click', () => toggleEmojiPicker());
 
     // Voice input (just a placeholder)
-    DOM.voiceInputBtn.addEventListener('click', () => {
-        showToast('info', 'Voice Input', 'Voice recognition is not available in your browser.');
-    });
+    if (DOM.voiceInputBtn) {
+        DOM.voiceInputBtn.addEventListener('click', () => {
+            showToast('info', 'Voice Input', 'Voice recognition is not available in your browser.');
+        });
+    }
 
     // Settings Modal
-    DOM.settingsBtn.addEventListener('click', () => {
-        loadSettingsToUI();
-        openModal('settings');
-    });
+    if (DOM.settingsBtn) {
+        DOM.settingsBtn.addEventListener('click', () => {
+            loadSettingsToUI();
+            openModal('settings');
+        });
+    }
 
     // Mobile Profile Button in Header
     if (DOM.mobileProfileBtn) {
@@ -2323,81 +2343,96 @@ function initEventListeners() {
         });
     }
 
-    DOM.closeSettingsModal.addEventListener('click', () => closeModal('settings'));
-    DOM.saveSettingsBtn.addEventListener('click', () => saveSettingsFromUI());
-    DOM.resetSettingsBtn.addEventListener('click', () => resetSettings());
+    if (DOM.closeSettingsModal) DOM.closeSettingsModal.addEventListener('click', () => closeModal('settings'));
+    if (DOM.saveSettingsBtn) DOM.saveSettingsBtn.addEventListener('click', () => saveSettingsFromUI());
+    if (DOM.resetSettingsBtn) DOM.resetSettingsBtn.addEventListener('click', () => resetSettings());
 
     // Profile Modal
-    DOM.profileBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        loadProfileToUI();
-        updateStatsUI();
-        openModal('profile');
-    });
-    DOM.closeProfileModal.addEventListener('click', () => closeModal('profile'));
-    DOM.saveProfileBtn.addEventListener('click', () => saveProfileFromUI());
+    if (DOM.profileBtn) {
+        DOM.profileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadProfileToUI();
+            updateStatsUI();
+            openModal('profile');
+        });
+    }
+    
+    if (DOM.closeProfileModal) DOM.closeProfileModal.addEventListener('click', () => closeModal('profile'));
+    if (DOM.saveProfileBtn) DOM.saveProfileBtn.addEventListener('click', () => saveProfileFromUI());
     
     // Avatar Upload
-    DOM.changeAvatarBtn.addEventListener('click', () => DOM.avatarInput.click());
-    DOM.avatarInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            // Preview
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                DOM.profileAvatarImg.src = event.target.result;
-                DOM.profileAvatarImg.style.display = 'block';
-                DOM.profileAvatarIcon.style.display = 'none';
-            };
-            reader.readAsDataURL(file);
-
-            // Upload to backend
-            const formData = new FormData();
-            formData.append('avatar', file);
-            formData.append('user_id', state.profile.user_id);
-
-            try {
-                showToast('info', 'Uploading...', 'Uploading your profile picture.');
-                const response = await fetch('/api/profile/avatar', {
-                    method: 'POST',
-                    body: formData
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    state.profile.avatar = data.avatar_url;
-                    saveProfile();
-                    
-                    // Update UI immediately
-                    loadProfileToUI();
-                    
-                    showToast('success', 'Avatar Updated', 'Your profile picture has been saved.');
-                }
-            } catch (e) {
-                showToast('error', 'Upload Error', 'Failed to upload image.');
-            }
-        }
-    });
-
-    DOM.signOutBtn.addEventListener('click', () => {
-        showConfirmModal('Sign Out', 'Are you sure you want to sign out?', () => {
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('nova_profile');
-            window.location.href = 'index.html';
+    if (DOM.changeAvatarBtn) {
+        DOM.changeAvatarBtn.addEventListener('click', () => {
+            if (DOM.avatarInput) DOM.avatarInput.click();
         });
-    });
+    }
+
+    if (DOM.avatarInput) {
+        DOM.avatarInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                // Preview
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    if (DOM.profileAvatarImg) {
+                        DOM.profileAvatarImg.src = event.target.result;
+                        DOM.profileAvatarImg.style.display = 'block';
+                    }
+                    if (DOM.profileAvatarIcon) DOM.profileAvatarIcon.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+
+                // Upload to backend
+                const formData = new FormData();
+                formData.append('avatar', file);
+                if (state.profile && state.profile.user_id) formData.append('user_id', state.profile.user_id);
+
+                try {
+                    showToast('info', 'Uploading...', 'Uploading your profile picture.');
+                    const response = await fetch('/api/profile/avatar', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (state.profile) {
+                            state.profile.avatar = data.avatar_url;
+                            saveProfile();
+                            loadProfileToUI();
+                        }
+                        showToast('success', 'Avatar Updated', 'Your profile picture has been saved.');
+                    }
+                } catch (e) {
+                    showToast('error', 'Upload Error', 'Failed to upload image.');
+                }
+            }
+        });
+    }
+
+    if (DOM.signOutBtn) {
+        DOM.signOutBtn.addEventListener('click', () => {
+            showConfirmModal('Sign Out', 'Are you sure you want to sign out?', () => {
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('nova_profile');
+                window.location.href = 'index.html';
+            });
+        });
+    }
 
     // File Upload Modal
-    DOM.closeFileUploadModal.addEventListener('click', () => closeModal('fileUpload'));
-    DOM.confirmUploadBtn.addEventListener('click', () => confirmFileUpload());
-    DOM.cancelUploadBtn.addEventListener('click', () => {
-        state.attachedFiles = [];
-        renderUploadedFiles();
-        closeModal('fileUpload');
-    });
+    if (DOM.closeFileUploadModal) DOM.closeFileUploadModal.addEventListener('click', () => closeModal('fileUpload'));
+    if (DOM.confirmUploadBtn) DOM.confirmUploadBtn.addEventListener('click', () => confirmFileUpload());
+    if (DOM.cancelUploadBtn) {
+        DOM.cancelUploadBtn.addEventListener('click', () => {
+            state.attachedFiles = [];
+            renderUploadedFiles();
+            closeModal('fileUpload');
+        });
+    }
 
     // Confirm Modal
-    DOM.closeConfirmModal.addEventListener('click', () => closeModal('confirm'));
-    DOM.confirmCancelBtn.addEventListener('click', () => closeModal('confirm'));
+    if (DOM.closeConfirmModal) DOM.closeConfirmModal.addEventListener('click', () => closeModal('confirm'));
+    if (DOM.confirmCancelBtn) DOM.confirmCancelBtn.addEventListener('click', () => closeModal('confirm'));
 
     // Global keyboard shortcuts
     document.addEventListener('keydown', handleKeyboardShortcuts);

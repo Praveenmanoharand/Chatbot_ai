@@ -11,13 +11,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const formStatus = document.getElementById('formStatus');
 
     // Mobile Sidebar Toggle
-    menuToggleBtn.addEventListener('click', () => {
-        sidebar.classList.add('active');
-    });
+    if (menuToggleBtn) {
+        menuToggleBtn.addEventListener('click', () => {
+            sidebar.classList.add('active');
+        });
+    }
 
-    closeSidebarBtn.addEventListener('click', () => {
-        sidebar.classList.remove('active');
-    });
+    if (closeSidebarBtn) {
+        closeSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+        });
+    }
 
     // Section Switching
     historyItems.forEach(item => {
