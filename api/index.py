@@ -459,7 +459,7 @@ def shared_chat(conv_id):
                 
                 <style>
                     :root {
-                        --header-height: 70px;
+                        --header-height: 64px;
                     }
                     body { 
                         background-color: var(--bg-primary);
@@ -467,7 +467,7 @@ def shared_chat(conv_id):
                         margin: 0;
                         font-family: var(--font-ui);
                         overflow-x: hidden;
-                        overflow-y: auto; /* Ensure body scrolls */
+                        overflow-y: auto;
                     }
                     .shared-header {
                         height: var(--header-height);
@@ -489,38 +489,38 @@ def shared_chat(conv_id):
                         text-decoration: none;
                     }
                     .brand-icon {
-                        width: 36px;
-                        height: 36px;
+                        width: 32px;
+                        height: 32px;
                         background: var(--primary);
                         color: white;
-                        border-radius: var(--radius-lg);
+                        border-radius: var(--radius-md);
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        font-size: 1.2rem;
-                        box-shadow: 0 0 15px var(--primary-alpha-30);
+                        font-size: 1rem;
+                        box-shadow: 0 0 10px var(--primary-alpha-30);
                     }
                     .brand-name {
                         font-family: var(--font-display);
                         font-weight: 700;
                         color: var(--text-primary);
-                        font-size: 1.1rem;
-                    }
-                    .chat-title {
-                        font-family: var(--font-display);
-                        font-size: var(--text-base);
-                        font-weight: 600;
-                        color: var(--text-secondary);
-                        max-width: 300px;
-                        white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
+                        font-size: 1rem;
+                        letter-spacing: -0.01em;
                     }
                     .shared-container {
                         max-width: 800px;
                         margin: 0 auto;
-                        padding: var(--space-6) var(--space-4) 100px;
+                        padding: var(--space-10) var(--space-4) 100px;
                         width: 100%;
+                    }
+                    .page-title {
+                        font-family: var(--font-display);
+                        font-size: var(--text-3xl);
+                        font-weight: 700;
+                        color: var(--text-primary);
+                        margin-bottom: var(--space-8);
+                        text-align: left;
+                        line-height: 1.2;
                     }
                     /* Override messages-area scroll for shared view */
                     .messages-area {
@@ -544,21 +544,20 @@ def shared_chat(conv_id):
                     .cta-btn {
                         display: inline-flex;
                         align-items: center;
-                        gap: 10px;
-                        padding: 12px 28px;
+                        gap: 8px;
+                        padding: 10px 20px;
                         background: linear-gradient(135deg, var(--primary), var(--primary-dark));
                         color: white;
                         text-decoration: none;
                         border-radius: var(--radius-full);
                         font-weight: 600;
-                        font-size: var(--text-sm);
+                        font-size: 0.85rem;
                         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                        box-shadow: 0 4px 15px var(--primary-alpha-20);
-                        margin-top: 20px;
+                        box-shadow: 0 4px 10px var(--primary-alpha-20);
                     }
                     .cta-btn:hover {
-                        transform: translateY(-2px) scale(1.02);
-                        box-shadow: 0 8px 25px var(--primary-alpha-40);
+                        transform: translateY(-2px);
+                        box-shadow: 0 6px 18px var(--primary-alpha-40);
                     }
                     .message-meta {
                         display: flex;
@@ -572,11 +571,6 @@ def shared_chat(conv_id):
                         padding: 2px 8px;
                         border-radius: 4px;
                     }
-
-                    @media (max-width: 600px) {
-                        .brand-name { display: none; }
-                        .chat-title { max-width: 200px; font-size: var(--text-sm); }
-                    }
                 </style>
             </head>
             <body>
@@ -587,14 +581,15 @@ def shared_chat(conv_id):
                         </div>
                         <span class="brand-name">Aura AI</span>
                     </a>
-                    <div class="chat-title">{{ conv.title }}</div>
-                    <a href="/" class="cta-btn" style="margin: 0; padding: 8px 16px; font-size: 0.8rem;">
+                    <a href="/" class="cta-btn secondary" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-subtle);">
                         <i class="fas fa-plus"></i>
                         <span>New Chat</span>
                     </a>
                 </header>
 
                 <main class="shared-container">
+                    <h1 class="page-title">{{ conv.title }}</h1>
+                    
                     <div class="messages-area">
                         {% for msg in messages %}
                             <div class="message {{ msg.role }}">
@@ -616,11 +611,10 @@ def shared_chat(conv_id):
                 </main>
 
                 <footer class="shared-footer">
-                    <p style="color: var(--text-secondary); font-size: 0.9rem;">This conversation was generated and shared via Aura AI.</p>
-                    <p style="color: var(--text-tertiary); font-size: 0.8rem; margin-top: 5px;">Experience next-generation artificial intelligence.</p>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Chat shared via Aura AI</p>
                     <a href="/" class="cta-btn">
                         <i class="fas fa-bolt"></i>
-                        Get Started for Free
+                        Try it Yourself
                     </a>
                 </footer>
             </body>
