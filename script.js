@@ -139,7 +139,7 @@ const DOM = {
     emojiPicker: document.getElementById('emojiPicker'),
     emojiGrid: document.getElementById('emojiGrid'),
     emojiSearch: document.getElementById('emojiSearch'),
-    pauseBtn: document.getElementById('pauseBtn'),
+    pauseBtn: null, // Removed - unified into stopBtn
     
     // Modals
     settingsModal: document.getElementById('settingsModal'),
@@ -1090,29 +1090,22 @@ async function typewriterEffect(message) {
     const fullText = message.text;
     const CHAR_SPEED = 18; // ms per character
 
-    // Type out character by character
-    DOM.pauseBtn.classList.remove('hidden');
+    // Keep stop button visible during typewriter (don't hide it)
+    state.isAborted = false;
     
     for (let i = 0; i <= fullText.length; i++) {
-        // Handle pause
-        while (state.isPaused) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            if (state.isAborted) break;
-        }
-        
         if (state.isAborted) break;
         textEl.innerHTML = parseMessage(fullText.slice(0, i));
         if (state.settings.autoScroll) scrollToBottom(false);
         await new Promise(resolve => setTimeout(resolve, CHAR_SPEED));
     }
 
-    DOM.pauseBtn.classList.add('hidden');
-    // Ensure pause state is reset if finished
-    state.isPaused = false;
-    updatePauseBtnUI();
-
+    // If stopped mid-way, text is already partially shown
     // Remove blinking cursor after typing is done
     cursorEl.remove();
+    
+    // Re-enable input now that AI has fully responded
+    enableInputArea();
 }
 
 /**
@@ -1219,9 +1212,25 @@ function appendMessage(sender, text, files = []) {
     return message;
 }
 
-// =====================================================
-// TYPING INDICATOR & LOADER
-// =====================================================
+/**
+ * Disable input area while AI is generating (ChatGPT/Gemini style)
+ */
+function disableInputArea() {
+    if (DOM.messageInput) DOM.messageInput.disabled = true;
+    if (DOM.sendBtn) DOM.sendBtn.classList.add('hidden');
+    if (DOM.stopBtn) DOM.stopBtn.classList.remove('hidden');
+}
+
+/**
+ * Re-enable input area after AI finishes or is stopped
+ */
+function enableInputArea() {
+    if (DOM.messageInput) DOM.messageInput.disabled = false;
+    if (DOM.sendBtn) DOM.sendBtn.classList.remove('hidden');
+    if (DOM.stopBtn) DOM.stopBtn.classList.add('hidden');
+    state.isPaused = false;
+    state.isAborted = false;
+}
 
 /**
  * Show typing indicator
@@ -1232,25 +1241,21 @@ function showLoader() {
     DOM.statusIndicator.className = 'status-indicator busy';
     DOM.botStatus.textContent = 'Typing...';
     
-    // Switch Send -> Stop
-    DOM.sendBtn.classList.add('hidden');
-    DOM.stopBtn.classList.remove('hidden');
+    // Disable input + show stop button (ChatGPT/Gemini style)
+    disableInputArea();
     
     scrollToBottom(true);
 }
 
 /**
- * Hide typing indicator
+ * Hide typing indicator (does NOT re-enable input - typewriter still running)
  */
 function hideLoader() {
     state.isTyping = false;
     DOM.typingIndicator.classList.remove('visible');
     DOM.statusIndicator.className = 'status-indicator online';
     DOM.botStatus.textContent = 'Online - Ready to help';
-    
-    // Switch Stop -> Send
-    DOM.sendBtn.classList.remove('hidden');
-    DOM.stopBtn.classList.add('hidden');
+    // NOTE: Does NOT re-enable input. enableInputArea() is called after typewriter finishes.
 }
 
 // =====================================================
@@ -1435,6 +1440,7 @@ async function sendMessage() {
 
     } catch (error) {
         hideLoader();
+        enableInputArea();
         // Ignore errors if manually aborted
         if (state.isAborted || error.name === 'AbortError') return;
         appendError(error.message);
@@ -2370,8 +2376,7 @@ function initEventListeners() {
     // Stop button
     if (DOM.stopBtn) DOM.stopBtn.addEventListener('click', () => stopGeneration());
 
-    // Pause button
-    if (DOM.pauseBtn) DOM.pauseBtn.addEventListener('click', () => togglePause());
+    // Pause button removed - unified into stop button
 
     // Attachment & Emoji actions
     if (DOM.attachFileBtn) DOM.attachFileBtn.addEventListener('click', () => openModal('fileUpload'));
@@ -2508,60 +2513,29 @@ function initEventListeners() {
  * Stop AI generation
  */
 function stopGeneration() {
-    if (state.isTyping && state.abortController) {
+    if (state.abortController) {
         state.isAborted = true;
         state.abortController.abort();
-        
-        // Find the last bot message and update its content
-        const messageEls = DOM.messagesArea.querySelectorAll('.message.bot');
-        const lastMessageEl = messageEls[messageEls.length - 1];
-        if (lastMessageEl) {
-            const textEl = lastMessageEl.querySelector('.typewriter-text');
-            if (textEl) {
-                textEl.innerHTML = '<span style="color: var(--text-tertiary); font-style: italic;">Conversation Paused</span>';
-            }
-            const cursorEl = lastMessageEl.querySelector('.typewriter-cursor');
-            if (cursorEl) cursorEl.remove();
+    }
+    
+    // Find the last bot message and mark it as stopped
+    const messageEls = DOM.messagesArea.querySelectorAll('.message.bot');
+    const lastMessageEl = messageEls[messageEls.length - 1];
+    if (lastMessageEl) {
+        const textEl = lastMessageEl.querySelector('.typewriter-text');
+        if (textEl && !textEl.textContent.trim()) {
+            textEl.innerHTML = '<span style="color: var(--text-tertiary); font-style: italic;">Generation stopped.</span>';
         }
-        
-        hideLoader();
-        showToast('info', 'Stopped', 'Conversation paused.');
+        const cursorEl = lastMessageEl.querySelector('.typewriter-cursor');
+        if (cursorEl) cursorEl.remove();
     }
+    
+    hideLoader();
+    enableInputArea();
+    if (DOM.messageInput) DOM.messageInput.focus();
 }
 
-/**
- * Toggle Pause/Resume for typewriter
- */
-function togglePause() {
-    state.isPaused = !state.isPaused;
-    updatePauseBtnUI();
-    
-    if (state.isPaused) {
-        showToast('info', 'Paused', 'Bot response paused.');
-    } else {
-        showToast('success', 'Resumed', 'Bot continuing to type.');
-    }
-}
-
-/**
- * Update Pause button UI based on state
- */
-function updatePauseBtnUI() {
-    if (!DOM.pauseBtn) return;
-    
-    const icon = DOM.pauseBtn.querySelector('i');
-    const span = DOM.pauseBtn.querySelector('span');
-    
-    if (state.isPaused) {
-        icon.className = 'fas fa-play';
-        span.textContent = 'Resume';
-        DOM.pauseBtn.classList.add('active');
-    } else {
-        icon.className = 'fas fa-pause';
-        span.textContent = 'Pause';
-        DOM.pauseBtn.classList.remove('active');
-    }
-}
+// togglePause and updatePauseBtnUI removed - unified into stopBtn
 
 async function init() {
     await initializeFromStorage();

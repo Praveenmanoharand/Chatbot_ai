@@ -2037,6 +2037,27 @@ INPUT AREA
     color: var(--text-tertiary);
 }
 
+/* Disabled state while AI is generating */
+.message-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.message-input:disabled::placeholder {
+    color: var(--text-muted);
+}
+
+/* Pulse the input border when AI is generating */
+.input-container:has(.message-input:disabled) {
+    border-color: var(--primary-alpha-30);
+    animation: generating-pulse 2s ease-in-out infinite;
+}
+
+@keyframes generating-pulse {
+    0%, 100% { border-color: var(--primary-alpha-30); }
+    50% { border-color: var(--primary-alpha-20); }
+}
+
 .input-decorations {
     position: absolute;
     inset: 0;
@@ -2109,106 +2130,49 @@ INPUT AREA
     transform: scale(2);
 }
 
-/* Stop Button - Floating pill style */
+/* Stop Button - ChatGPT/Gemini style, replaces send button in-place */
 .stop-btn {
-    position: absolute;
-    top: -45px;
-    left: 50%;
-    transform: translateX(-50%);
+    width: 44px;
+    height: 44px;
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-4);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-default);
+    justify-content: center;
+    background: rgba(239, 68, 68, 0.12);
+    border: 2px solid rgba(239, 68, 68, 0.35);
     border-radius: var(--radius-full);
-    color: var(--text-primary);
-    font-size: var(--text-xs);
-    font-weight: var(--font-medium);
-    cursor: pointer;
-    box-shadow: var(--shadow-lg);
-    z-index: 100;
-    transition: all var(--transition-normal);
-    animation: slideUpFade 0.3s ease-out;
-}
-
-@keyframes slideUpFade {
-    from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-    }
-}
-
-.stop-btn i {
     color: #ef4444;
-    font-size: 10px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    animation: pulse-stop 2s ease-in-out infinite;
+    flex-shrink: 0;
 }
 
 .stop-btn:hover {
-    background: var(--bg-surface);
-    border-color: var(--primary);
-    transform: translateX(-50%) translateY(-2px);
-    box-shadow: var(--shadow-xl), 0 0 20px var(--primary-alpha-10);
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #ef4444;
+    transform: scale(1.08);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+    animation: none;
 }
 
 .stop-btn:active {
-    transform: translateX(-50%) scale(0.95);
+    transform: scale(0.95);
 }
 
 .stop-btn.hidden {
     display: none;
 }
 
-/* Pause Button - Same style as Stop */
-.pause-btn {
-    position: absolute;
-    top: -45px;
-    left: calc(50% + 70px); /* Positioned to the right of stop button if both shown */
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-4);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-full);
-    color: var(--text-primary);
-    font-size: var(--text-xs);
-    font-weight: var(--font-medium);
-    cursor: pointer;
-    box-shadow: var(--shadow-lg);
-    z-index: 100;
-    transition: all var(--transition-normal);
-    animation: slideUpFade 0.3s ease-out;
-}
-
-/* If only pause btn is shown, center it */
-.stop-btn.hidden + .pause-btn {
-    left: 50%;
-}
-
-.pause-btn i {
-    color: #f59e0b; /* Amber/Orange for Pause */
-    font-size: 10px;
-}
-
-.pause-btn:hover {
-    background: var(--bg-surface);
-    border-color: var(--primary);
-    transform: translateX(-50%) translateY(-2px);
-    box-shadow: var(--shadow-xl), 0 0 20px var(--primary-alpha-10);
-}
-
-.pause-btn:active {
-    transform: translateX(-50%) scale(0.95);
-}
-
-.pause-btn.hidden {
-    display: none;
+@keyframes pulse-stop {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+        border-color: rgba(239, 68, 68, 0.35);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+        border-color: rgba(239, 68, 68, 0.6);
+    }
 }
 
 /* Input Footer */
