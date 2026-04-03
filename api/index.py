@@ -20,11 +20,17 @@ CORS(app)
 
 # MongoDB Configuration
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/ChatBot_AI")
-mongo_client = MongoClient(MONGO_URI)
+# Add timeout to prevent hanging on connection failure
+mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
 db = mongo_client.get_database()
 users_collection = db.users
 conversations_collection = db.conversations
 notifications_collection = db.notifications
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Pass through HTTP errors
+    return jsonify({"error": str(e)}), 500
 
 # Paths also look one level up
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'uploads', 'avatars')
