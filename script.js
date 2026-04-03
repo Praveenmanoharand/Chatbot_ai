@@ -59,7 +59,10 @@ const state = {
         saveHistory: true,
         analytics: false,
         aiModel: 'power-bt-4', // Synchronizing with settings.html
-        aiTemp: 70
+        aiTemp: 70,
+        autoSendVoice: false,
+        readResponses: false,
+        voiceLanguage: 'en-US'
     },
     stats: {
         messagesToday: 0,
@@ -1437,6 +1440,11 @@ async function sendMessage() {
         updateCurrentChat();
         
         await typewriterEffect(botMessage);
+        
+        // Read response aloud if enabled
+        if (state.settings.readResponses && !state.isAborted) {
+            speakText(botMessage.text);
+        }
 
     } catch (error) {
         hideLoader();
@@ -2001,7 +2009,10 @@ function resetSettings() {
         autoScroll: true,
         responseLength: 'medium',
         saveHistory: true,
-        analytics: false
+        analytics: false,
+        autoSendVoice: false,
+        readResponses: false,
+        voiceLanguage: 'en-US'
     };
 
     loadSettingsToUI();
@@ -2529,6 +2540,11 @@ function stopGeneration() {
     hideLoader();
     enableInputArea();
     if (DOM.messageInput) DOM.messageInput.focus();
+    
+    // Stop reading aloud if it was playing
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+    }
 }
 
 // togglePause and updatePauseBtnUI removed - unified into stopBtn
@@ -2554,7 +2570,7 @@ function initVoiceInput() {
     recognition = new SpeechRecognition();
     recognition.continuous = false;      // Stop after user pauses
     recognition.interimResults = true;   // Show words as user speaks
-    recognition.lang = 'en-US';          // Default language
+    recognition.lang = state.settings.voiceLanguage || 'en-US'; // Use setting language
 
     recognition.onstart = () => {
         isRecording = true;
@@ -2582,7 +2598,7 @@ function initVoiceInput() {
             handleInputChange();
         }
 
-        // Final result - clean up and place in input
+            // Final result - clean up and place in input
         if (finalTranscript) {
             const currentText = DOM.messageInput.value;
             // Append if there's already text, otherwise replace
@@ -2590,6 +2606,12 @@ function initVoiceInput() {
             DOM.messageInput.value = (currentText.trim() ? currentText.trim() + separator : '') + finalTranscript.trim();
             handleInputChange();
             DOM.messageInput.focus();
+            
+            if (state.settings.autoSendVoice) {
+                setTimeout(() => {
+                    sendMessage();
+                }, 300); // slight delay before send
+            }
         }
     };
 
@@ -2629,6 +2651,34 @@ function stopVoiceInput() {
     isRecording = false;
     if (DOM.voiceInputBtn) DOM.voiceInputBtn.classList.remove('recording');
     if (DOM.messageInput) DOM.messageInput.placeholder = 'Type your message...';
+}
+
+/**
+ * Text-to-Speech (TTS)
+ */
+function speakText(text) {
+    if (!window.speechSynthesis) return;
+    
+    // Stop any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    // Clean text (remove emojis, markdown hashes, etc. if needed, keep simple for now)
+    const cleanText = text.replace(/[*_#]/g, '').trim();
+    if (!cleanText) return;
+    
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.lang = state.settings.voiceLanguage || 'en-US';
+    
+    // Attempt to pick a good voice if available
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+        // Try to match language, prefer a natural voice
+        const matchedVoice = voices.find(v => v.lang.startsWith(utterance.lang) && v.name.toLowerCase().includes('natural')) || 
+                             voices.find(v => v.lang === utterance.lang);
+        if (matchedVoice) utterance.voice = matchedVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
 }
 
 async function init() {

@@ -18,7 +18,10 @@ const DOM = {
     autosaveToggle: document.getElementById('autosaveToggle'),
     clearHistoryBtn: document.getElementById('clearHistoryBtn'),
     exportDataBtn: document.getElementById('exportDataBtn'),
-    toastContainer: document.getElementById('toastContainer')
+    toastContainer: document.getElementById('toastContainer'),
+    autoSendVoiceToggle: document.getElementById('autoSendVoiceToggle'),
+    ttsToggle: document.getElementById('ttsToggle'),
+    voiceLangSelect: document.getElementById('voiceLangSelect')
 };
 
 let settings = {
@@ -31,7 +34,10 @@ let settings = {
     saveHistory: true,
     analytics: false,
     aiModel: 'power-bt-4',
-    aiTemp: 70
+    aiTemp: 70,
+    autoSendVoice: false,
+    readResponses: false,
+    voiceLanguage: 'en-US'
 };
 
 // =====================================================
@@ -61,6 +67,9 @@ function loadSettings() {
     if (DOM.compactToggle) DOM.compactToggle.checked = settings.compactMode;
     if (DOM.soundToggle) DOM.soundToggle.checked = settings.soundEffects;
     if (DOM.autosaveToggle) DOM.autosaveToggle.checked = settings.saveHistory;
+    if (DOM.autoSendVoiceToggle) DOM.autoSendVoiceToggle.checked = settings.autoSendVoice;
+    if (DOM.ttsToggle) DOM.ttsToggle.checked = settings.readResponses;
+    if (DOM.voiceLangSelect) DOM.voiceLangSelect.value = settings.voiceLanguage;
 }
 
 function saveSettings() {
@@ -117,6 +126,25 @@ function setupEventListeners() {
         settings.saveHistory = e.target.checked;
         saveSettings();
         showToast('info', 'Privacy Setting', 'Auto-save preference updated.');
+    });
+
+    // Voice & Speech Actions
+    DOM.autoSendVoiceToggle?.addEventListener('change', (e) => {
+        settings.autoSendVoice = e.target.checked;
+        saveSettings();
+        showToast('info', 'Voice Settings', `Auto-send speech ${settings.autoSendVoice ? 'enabled' : 'disabled'}.`);
+    });
+
+    DOM.ttsToggle?.addEventListener('change', (e) => {
+        settings.readResponses = e.target.checked;
+        saveSettings();
+        showToast('info', 'Voice Settings', `Read responses aloud ${settings.readResponses ? 'enabled' : 'disabled'}.`);
+    });
+
+    DOM.voiceLangSelect?.addEventListener('change', (e) => {
+        settings.voiceLanguage = e.target.value;
+        saveSettings();
+        showToast('info', 'Voice Settings', 'Voice recognition language updated.');
     });
 
     // Data Actions
