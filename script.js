@@ -2382,12 +2382,8 @@ function initEventListeners() {
     if (DOM.attachFileBtn) DOM.attachFileBtn.addEventListener('click', () => openModal('fileUpload'));
     if (DOM.emojiBtn) DOM.emojiBtn.addEventListener('click', () => toggleEmojiPicker());
 
-    // Voice input (just a placeholder)
-    if (DOM.voiceInputBtn) {
-        DOM.voiceInputBtn.addEventListener('click', () => {
-            // Voice input removed
-        });
-    }
+    // Voice input - Full Web Speech API
+    initVoiceInput();
 
     // Settings Modal
     if (DOM.settingsBtn) {
@@ -2536,6 +2532,104 @@ function stopGeneration() {
 }
 
 // togglePause and updatePauseBtnUI removed - unified into stopBtn
+
+// =====================================================
+// VOICE INPUT (Web Speech API)
+// =====================================================
+
+let recognition = null;
+let isRecording = false;
+
+function initVoiceInput() {
+    if (!DOM.voiceInputBtn) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        // Hide mic button if browser doesn't support it
+        DOM.voiceInputBtn.style.display = 'none';
+        return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;      // Stop after user pauses
+    recognition.interimResults = true;   // Show words as user speaks
+    recognition.lang = 'en-US';          // Default language
+
+    recognition.onstart = () => {
+        isRecording = true;
+        DOM.voiceInputBtn.classList.add('recording');
+        DOM.messageInput.placeholder = '🎙️ Listening... speak now';
+        if (DOM.messageInput.disabled) return; // Don't allow during AI generation
+    };
+
+    recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+                finalTranscript += transcript;
+            } else {
+                interimTranscript += transcript;
+            }
+        }
+
+        // Show interim result in real-time as user speaks
+        if (interimTranscript) {
+            DOM.messageInput.value = interimTranscript;
+            handleInputChange();
+        }
+
+        // Final result - clean up and place in input
+        if (finalTranscript) {
+            const currentText = DOM.messageInput.value;
+            // Append if there's already text, otherwise replace
+            const separator = currentText.trim() && !currentText.endsWith(' ') ? ' ' : '';
+            DOM.messageInput.value = (currentText.trim() ? currentText.trim() + separator : '') + finalTranscript.trim();
+            handleInputChange();
+            DOM.messageInput.focus();
+        }
+    };
+
+    recognition.onerror = (event) => {
+        stopVoiceInput();
+        if (event.error === 'not-allowed') {
+            showToast('error', 'Microphone Blocked', 'Please allow microphone access in your browser settings.');
+        } else if (event.error === 'no-speech') {
+            showToast('info', 'No Speech Detected', 'Try speaking again.');
+        } else {
+            showToast('warning', 'Voice Error', `Error: ${event.error}`);
+        }
+    };
+
+    recognition.onend = () => {
+        stopVoiceInput();
+    };
+
+    DOM.voiceInputBtn.addEventListener('click', () => {
+        if (DOM.messageInput.disabled) {
+            showToast('info', 'Please Wait', 'Cannot record while AI is generating.');
+            return;
+        }
+        if (isRecording) {
+            recognition.stop();
+        } else {
+            try {
+                recognition.start();
+            } catch (e) {
+                showToast('error', 'Mic Error', 'Could not start voice input.');
+            }
+        }
+    });
+}
+
+function stopVoiceInput() {
+    isRecording = false;
+    if (DOM.voiceInputBtn) DOM.voiceInputBtn.classList.remove('recording');
+    if (DOM.messageInput) DOM.messageInput.placeholder = 'Type your message...';
+}
 
 async function init() {
     await initializeFromStorage();
