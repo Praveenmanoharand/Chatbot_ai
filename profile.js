@@ -85,9 +85,9 @@ function updateUI() {
         DOM.userEmailDisplay.textContent = state.profile.email || '';
         
         if (state.profile.stats) {
-            DOM.totalMessagesStat.textContent = state.profile.stats.total_messages || 0;
-            DOM.totalChatsStat.textContent = state.profile.stats.total_chats || 0;
-            DOM.daysActiveStat.textContent = state.profile.stats.member_since || 'Mar 2024';
+            if (DOM.totalMessagesStat) DOM.totalMessagesStat.textContent = state.profile.stats.total_messages || 0;
+            if (DOM.totalChatsStat) DOM.totalChatsStat.textContent = state.profile.stats.total_chats || 0;
+            if (DOM.daysActiveStat) DOM.daysActiveStat.textContent = state.profile.stats.member_since || 'Mar 2024';
         }
     }
 }
