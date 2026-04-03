@@ -29,8 +29,16 @@ notifications_collection = db.notifications
 # Paths also look one level up
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'uploads', 'avatars')
 DOCS_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'uploads', 'documents')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(DOCS_FOLDER, exist_ok=True)
+
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(DOCS_FOLDER, exist_ok=True)
+except OSError:
+    UPLOAD_FOLDER = '/tmp/uploads/avatars'
+    DOCS_FOLDER = '/tmp/uploads/documents'
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    os.makedirs(DOCS_FOLDER, exist_ok=True)
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['DOCS_FOLDER'] = DOCS_FOLDER
 
@@ -207,11 +215,7 @@ def upload_avatar():
         file_bytes = file.read()
         avatar_base64 = base64.b64encode(file_bytes).decode('utf-8')
         avatar_data_url = f"data:{file.content_type};base64,{avatar_base64}"
-        filename = f"{user_id}_{int(datetime.datetime.now().timestamp())}.jpg"
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.seek(0)
-        file.save(file_path)
-        avatar_url = f"/uploads/avatars/{filename}"
+        avatar_url = avatar_data_url
         users_collection.update_one({"user_id": user_id}, {"$set": {"avatar_url": avatar_url, "avatar_data": avatar_data_url}})
         return jsonify({"message": "Avatar uploaded", "avatar_url": avatar_url})
 
