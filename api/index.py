@@ -104,7 +104,7 @@ def load_knowledge():
     return processed_sections
 
 def get_relevant_context(query, knowledge_base, top_n=3):
-    """Simple keyword-based retrieval for context with relevance scoring."""
+    """Keyword-based retrieval with a RELEVANCE THRESHOLD to avoid noise."""
     if not query or not knowledge_base:
         return []
         
@@ -113,9 +113,11 @@ def get_relevant_context(query, knowledge_base, top_n=3):
     scored_sections = []
     for section in knowledge_base:
         section_words = set(re.findall(r'\w+', section.lower()))
-        # Score based on how many unique keywords overlap
+        # Unique word overlap
         score = len(query_words.intersection(section_words))
-        if score > 0:
+        # RELEVANCE THRESHOLD: Require at least 3 matching unique words for real context
+        # This prevents simple words like "hi" or "hello" from pulling technical docs.
+        if score >= 3:
             scored_sections.append((score, section))
             
     # Sort by relevance score
@@ -392,7 +394,17 @@ def chat():
     if len(full_context) > MAX_CONTEXT_CHARS:
         full_context = full_context[:MAX_CONTEXT_CHARS] + "..."
     
-    system_prompt = f"You are 'Aura AI', a premium AI Expert.\nContext:\n{full_context}"
+    # SMART SYSTEM PROMPT: Guide the AI on how to handle conversation vs technical context
+    system_prompt = (
+        "You are 'Aura AI', a premium, highly-intelligent personal assistant. "
+        "Your personality is friendly, expert, and conversational.\n\n"
+        "GUIDELINES:\n"
+        "1. If the user is just saying hello, making small talk, or asking about you, "
+        "respond naturally as a human-like assistant. DO NOT use technical context unless it is directly helpful.\n"
+        "2. If the user asks a specific question covered in the 'Context' block below, use that information to provide an expert answer.\n"
+        "3. Always keep your formatting clean and professional.\n\n"
+        f"Context (Reference Only):\n{full_context}"
+    )
     messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_message}]
     
     if conv_id and user_id:
