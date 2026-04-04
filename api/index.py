@@ -67,6 +67,7 @@ KNOWLEDGE_FILE = os.path.join(os.path.dirname(__file__), "..", "AI Knowledge.txt
 
 GROQ_MODELS = [
     "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
     "llama3-70b-8192",
     "llama3-8b-8192",
     "mixtral-8x7b-32768"
@@ -74,41 +75,50 @@ GROQ_MODELS = [
 
 FREE_MODELS = [
     "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemma-3-27b-it:free",
-    "google/gemma-3-12b-it:free",
+    "google/gemma-2-9b-it:free",
     "mistralai/mistral-small-24b-instruct-2501:free",
     "microsoft/phi-3-mini-128k-instruct:free",
+    "qwen/qwen-2.5-7b-instruct:free",
 ]
 
 def load_knowledge():
-    """Reads and parses the AI Knowledge text file into sections."""
+    """Reads and parses the AI Knowledge text file into sections, ensuring snippets aren't too large."""
     if not os.path.exists(KNOWLEDGE_FILE):
         return []
     
     with open(KNOWLEDGE_FILE, 'r', encoding='utf-8') as f:
         content = f.read()
     
+    # Split by common delimiters
     sections = re.split(r'-{10,}|={10,}', content)
     
     processed_sections = []
     for section in sections:
         cleaned = section.strip()
         if cleaned and len(cleaned) > 20:
+            # SAFETY: Truncate individual snippets if they are accidentally huge
+            if len(cleaned) > 5000:
+                cleaned = cleaned[:5000] + "..."
             processed_sections.append(cleaned)
             
     return processed_sections
 
 def get_relevant_context(query, knowledge_base, top_n=3):
-    """Simple keyword-based retrieval for context."""
+    """Simple keyword-based retrieval for context with relevance scoring."""
+    if not query or not knowledge_base:
+        return []
+        
     query_words = set(re.findall(r'\w+', query.lower()))
     
     scored_sections = []
     for section in knowledge_base:
         section_words = set(re.findall(r'\w+', section.lower()))
+        # Score based on how many unique keywords overlap
         score = len(query_words.intersection(section_words))
         if score > 0:
             scored_sections.append((score, section))
             
+    # Sort by relevance score
     scored_sections.sort(key=lambda x: x[0], reverse=True)
     return [s[1] for s in scored_sections[:top_n]]
 
@@ -122,6 +132,7 @@ def call_openrouter(messages):
         "Content-Type": "application/json"
     }
     
+    last_status = None
     for model in FREE_MODELS:
         try:
             payload = {
@@ -141,14 +152,16 @@ def call_openrouter(messages):
                 if 'choices' in result and result['choices']:
                     return result['choices'][0]['message']['content'], None
             
-            # On ANY non-200 code, skip to the next model
-            print(f"OpenRouter model {model} failed with status {response.status_code}, trying next...")
+            last_status = response.status_code
+            print(f"OpenRouter model {model} failed with status {response.status_code}")
             continue
 
         except Exception as e:
             print(f"OpenRouter exception for {model}: {str(e)}")
             continue
 
+    if last_status:
+        return None, f"OpenRouter status {last_status}: Check your API key or quota."
     return None, "All OpenRouter models are currently unavailable."
 
 def call_groq(messages):
@@ -161,6 +174,7 @@ def call_groq(messages):
         "Content-Type": "application/json"
     }
     
+    last_status = None
     for model in GROQ_MODELS:
         payload = {
             "model": model,
@@ -184,14 +198,16 @@ def call_groq(messages):
                 if 'choices' in result and result['choices']:
                     return result['choices'][0]['message']['content'], None
             
-            # On ANY non-200 code, skip to the next model
-            print(f"Groq model {model} failed with status {response.status_code}, trying next...")
+            last_status = response.status_code
+            print(f"Groq model {model} failed with status {response.status_code}")
             continue
                 
         except Exception as e:
             print(f"Groq API Error for {model}: {str(e)}")
             continue
 
+    if last_status:
+        return None, f"Groq status {last_status}: Check your API key or quota."
     return None, "Groq models unavailable."
 
 @app.route('/api/register', methods=['POST'])
@@ -369,7 +385,12 @@ def chat():
     
     knowledge_base = load_knowledge()
     relevant_sections = get_relevant_context(user_message, knowledge_base)
+    # SAFETY: Combine context and truncate to total safe character limit
+    # This prevents the 162KB file from overflowing the model's token limit
+    MAX_CONTEXT_CHARS = 8000
     full_context = "\n\n".join(relevant_sections)
+    if len(full_context) > MAX_CONTEXT_CHARS:
+        full_context = full_context[:MAX_CONTEXT_CHARS] + "..."
     
     system_prompt = f"You are 'Aura AI', a premium AI Expert.\nContext:\n{full_context}"
     messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_message}]
@@ -391,14 +412,20 @@ def chat():
             pass
 
     # Try Groq first as it's faster and more reliable
-    bot_response, error = call_groq(messages)
+    bot_response, groq_error = call_groq(messages)
     
     # Fallback to OpenRouter if Groq fails
-    if error:
-        print(f"Groq failed, falling back to OpenRouter: {error}")
-        bot_response, error = call_openrouter(messages)
+    if groq_error:
+        print(f"Groq failed, falling back to OpenRouter: {groq_error}")
+        bot_response, or_error = call_openrouter(messages)
         
-    if error: return jsonify({"error": error}), 503
+        if or_error:
+            combined_error = f"{groq_error} and {or_error}"
+            # Print technical details to developer server console for debugging
+            print(f"CRITICAL API ERROR: {combined_error}")
+            # Show friendly, professional error to the end user
+            friendly_error = "Our AI experts are currently heavily loaded. Please wait a moment and try again."
+            return jsonify({"error": friendly_error}), 503
     
     if conv_id and user_id:
         from bson.objectid import ObjectId

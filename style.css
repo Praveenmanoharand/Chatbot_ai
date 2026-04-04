@@ -3448,3 +3448,12 @@ PRINT STYLES
     }
 }
 
+
+/* Stop Generation Indicator */
+.stopped-indicator {
+    color: var(--text-tertiary);
+    font-style: italic;
+    font-size: 0.85em;
+    margin-left: 4px;
+    user-select: none;
+}

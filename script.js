@@ -1093,11 +1093,14 @@ async function typewriterEffect(message) {
     const fullText = message.text;
     const CHAR_SPEED = 18; // ms per character
 
-    // Keep stop button visible during typewriter (don't hide it)
-    state.isAborted = false;
+    // The stop button remains visible during typewriter (handled by hideLoader not calling enableInputArea)
     
     for (let i = 0; i <= fullText.length; i++) {
-        if (state.isAborted) break;
+        if (state.isAborted) {
+            // Final render of partial text if stopped
+            textEl.innerHTML = parseMessage(fullText.slice(0, i)) + ' <span class="stopped-indicator">(stopped)</span>';
+            break;
+        }
         textEl.innerHTML = parseMessage(fullText.slice(0, i));
         if (state.settings.autoScroll) scrollToBottom(false);
         await new Promise(resolve => setTimeout(resolve, CHAR_SPEED));
@@ -1232,7 +1235,6 @@ function enableInputArea() {
     if (DOM.sendBtn) DOM.sendBtn.classList.remove('hidden');
     if (DOM.stopBtn) DOM.stopBtn.classList.add('hidden');
     state.isPaused = false;
-    state.isAborted = false;
 }
 
 /**
@@ -2422,8 +2424,14 @@ function initEventListeners() {
     // Send button
     if (DOM.sendBtn) DOM.sendBtn.addEventListener('click', () => sendMessage());
 
-    // Stop button
-    if (DOM.stopBtn) DOM.stopBtn.addEventListener('click', () => stopGeneration());
+    // Stop button - using mousedown for faster response and stopPropagation
+    if (DOM.stopBtn) {
+        DOM.stopBtn.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            stopGeneration();
+        });
+        DOM.stopBtn.addEventListener('click', (e) => e.stopPropagation());
+    }
 
     // Pause button removed - unified into stop button
 
@@ -2558,8 +2566,8 @@ function initEventListeners() {
  * Stop AI generation
  */
 function stopGeneration() {
+    state.isAborted = true;
     if (state.abortController) {
-        state.isAborted = true;
         state.abortController.abort();
     }
     
@@ -2568,11 +2576,17 @@ function stopGeneration() {
     const lastMessageEl = messageEls[messageEls.length - 1];
     if (lastMessageEl) {
         const textEl = lastMessageEl.querySelector('.typewriter-text');
-        if (textEl && !textEl.textContent.trim()) {
-            textEl.innerHTML = '<span style="color: var(--text-tertiary); font-style: italic;">Generation stopped.</span>';
+        // If it's already got some content but the indicator isn't there yet, append it.
+        // The check against "stopped-indicator" is to avoid double-appending.
+        if (textEl && !textEl.querySelector('.stopped-indicator')) {
+            if (!textEl.textContent.trim()) {
+                textEl.innerHTML = '<span class="stopped-indicator" style="color: var(--text-tertiary); font-style: italic;">Generation stopped.</span>';
+            } else {
+                textEl.innerHTML += ' <span class="stopped-indicator" style="color: var(--text-tertiary); font-style: italic;">(stopped)</span>';
+            }
         }
         const cursorEl = lastMessageEl.querySelector('.typewriter-cursor');
-        if (cursorEl) cursorEl.remove();
+        if (cursorEl) cursorEl.style.display = 'none';
     }
     
     hideLoader();
