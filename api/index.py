@@ -6,6 +6,7 @@ import requests
 import uuid
 import datetime
 import bcrypt
+from bson.objectid import ObjectId
 from pymongo import MongoClient
 from flask import Flask, request, jsonify, send_from_directory, render_template_string
 from flask_cors import CORS
@@ -328,7 +329,6 @@ def create_conversation():
 
 @app.route('/api/conversations/<conv_id>', methods=['GET'])
 def get_conversation_details(conv_id):
-    from bson.objectid import ObjectId
     try:
         obj_id = ObjectId(conv_id)
     except:
@@ -388,27 +388,70 @@ def chat():
     knowledge_base = load_knowledge()
     relevant_sections = get_relevant_context(user_message, knowledge_base)
     # SAFETY: Combine context and truncate to total safe character limit
-    # This prevents the 162KB file from overflowing the model's token limit
-    MAX_CONTEXT_CHARS = 8000
+    MAX_CONTEXT_CHARS = 6000
     full_context = "\n\n".join(relevant_sections)
     if len(full_context) > MAX_CONTEXT_CHARS:
         full_context = full_context[:MAX_CONTEXT_CHARS] + "..."
     
-    # SMART SYSTEM PROMPT: Guide the AI on how to handle conversation vs technical context
+    # Fetch User Name for Personalization
+    user_name = "User"
+    if user_id:
+        user_record = users_collection.find_one({"user_id": user_id})
+        if user_record:
+            user_name = user_record.get("username", "User")
+    
+    # Fetch Conversation History
+    history_messages = []
+    debug_info = "No Conv ID"
+    if conv_id:
+        try:
+            obj_id = ObjectId(conv_id)
+            conv = conversations_collection.find_one({"_id": obj_id})
+            if conv and 'messages' in conv:
+                raw_messages = conv['messages'][-12:]
+                for m in raw_messages:
+                    m_role = m.get('role') or m.get('sender')
+                    m_content = m.get('content') or m.get('text', '')
+                    if not m_content: continue
+                    role = "user" if m_role == 'user' else "assistant"
+                    history_messages.append({"role": role, "content": m_content})
+                debug_info = f"Loaded {len(history_messages)} messages"
+            else:
+                debug_info = "Conv not found or empty"
+        except Exception as e:
+            debug_info = f"Error: {e}"
+    
+    # Optional: Log to file for deep debugging
+    try:
+        with open("chat_history_debug.log", "a") as f:
+            f.write(f"[{datetime.datetime.now()}] User: {user_name} | ID: {conv_id} | Status: {debug_info}\n")
+    except: pass
+
+    # Format history for the system prompt to double-reinforce memory
+    history_block = ""
+    for m in history_messages:
+        history_block += f"- {m['role'].upper()}: {m['content'][:200]}...\n"
+
+    # PREMIUM SYSTEM PROMPT (Gemini Style)
     system_prompt = (
-        "You are 'Aura AI', a premium, highly-intelligent personal assistant. "
-        "Your personality is friendly, expert, and conversational.\n\n"
-        "GUIDELINES:\n"
-        "1. If the user is just saying hello, making small talk, or asking about you, "
-        "respond naturally as a human-like assistant. DO NOT use technical context unless it is directly helpful.\n"
-        "2. If the user asks a specific question covered in the 'Context' block below, use that information to provide an expert answer.\n"
-        "3. Always keep your formatting clean and professional.\n\n"
-        f"Context (Reference Only):\n{full_context}"
+        f"You are 'Aura AI', a world-class intelligent assistant, similar to Google Gemini. "
+        f"You are currently talking to {user_name}.\n\n"
+        "CORE RULES:\n"
+        "1. MEMORY: You have a full memory of this conversation. NEVER say you cannot remember previous messages. "
+        "Review the 'RECENT CONVERSATION HISTORY' block below to maintain continuity. It contains your previous exchanges.\n"
+        "2. PERSONALITY: Be brilliant, proactive, and elegant. Don't be repetitive.\n"
+        "3. NO UNSOLICITED CODE: Only provide code if explicitly requested.\n"
+        "4. KNOWLEDGE: Use the 'Reference Context' only if needed.\n\n"
+        f"RECENT CONVERSATION HISTORY:\n{history_block or 'No previous messages yet.'}\n\n"
+        f"Reference Context:\n{full_context}"
     )
-    messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_message}]
+
+    # Construct Message Payload
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(history_messages)
+    messages.append({"role": "user", "content": user_message})
     
     if conv_id and user_id:
-        from bson.objectid import ObjectId
         try:
             obj_id = ObjectId(conv_id)
             # Save User Message IMMEDIATELY to avoid data loss before AI call
@@ -440,7 +483,6 @@ def chat():
             return jsonify({"error": friendly_error}), 503
     
     if conv_id and user_id:
-        from bson.objectid import ObjectId
         try:
             obj_id = ObjectId(conv_id)
             # Save Bot Response independently after generation
